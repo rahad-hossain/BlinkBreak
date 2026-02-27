@@ -10,9 +10,9 @@ const isDev = process.env.NODE_ENV === 'development'
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
-    height: 800,
+    height: 700,
     minWidth: 800,
-    minHeight: 600,
+    minHeight: 550,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
