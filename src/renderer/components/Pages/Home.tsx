@@ -11,7 +11,7 @@ export default function Home({ onNavigate }: HomeProps) {
           <img 
             src="/logo.jpg" 
             alt="BlinkBreak Logo" 
-            className="w-24 h-24 rounded-2xl shadow-lg border-2 border-primary/30"
+            className="w-24 h-24 rounded-2xl shadow-lg logo-border"
           />
         </div>
         <h1 className="text-5xl font-bold text-foreground mb-4">BlinkBreak</h1>
