@@ -1,9 +1,11 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
 import { SettingsManager } from './storage'
+import { TimerManager } from './timer'
 
 let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
+let timerManager: TimerManager
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -42,6 +44,18 @@ app.whenReady().then(() => {
   settingsManager = new SettingsManager()
   
   createWindow()
+  
+  if (mainWindow) {
+    timerManager = new TimerManager(mainWindow)
+    
+    // Auto-start timer with default settings after window is ready
+    mainWindow.webContents.once('did-finish-load', () => {
+      // Start with default: 20 min interval, 20 sec duration, Hard mode
+      setTimeout(() => {
+        timerManager.start(20, 20, 'hard')
+      }, 2000) // Wait 2 seconds after loading screen
+    })
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -56,11 +70,36 @@ app.on('window-all-closed', () => {
   }
 })
 
-// IPC Handlers
+// IPC Handlers - Settings
 ipcMain.handle('get-settings', async () => {
   return settingsManager.getSettings()
 })
 
 ipcMain.on('set-theme', (_, theme) => {
   mainWindow?.webContents.send('theme-changed', theme)
+})
+
+// IPC Handlers - Timer
+ipcMain.on('start-timer', (_, { interval, duration, mode }) => {
+  timerManager.start(interval, duration, mode)
+})
+
+ipcMain.on('stop-timer', () => {
+  timerManager.stop()
+})
+
+ipcMain.on('pause-timer', () => {
+  timerManager.pause()
+})
+
+ipcMain.on('resume-timer', () => {
+  timerManager.resume()
+})
+
+ipcMain.on('skip-break', () => {
+  timerManager.skip()
+})
+
+ipcMain.handle('get-timer-status', () => {
+  return timerManager.getStatus()
 })

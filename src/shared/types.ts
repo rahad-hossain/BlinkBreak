@@ -51,6 +51,26 @@ export interface ElectronAPI {
   
   // Theme
   setTheme: (theme: Theme) => void
+  
+  // Timer
+  startTimer: (interval: number, duration: number, mode: BreakMode) => void
+  stopTimer: () => void
+  pauseTimer: () => void
+  resumeTimer: () => void
+  skipBreak: () => void
+  getTimerStatus: () => Promise<TimerStatus>
+  onTimerStatus: (callback: (status: TimerStatus) => void) => void
+  onBreakStart: (callback: (data: { mode: BreakMode; duration: number }) => void) => void
+  onBreakEnd: (callback: () => void) => void
+}
+
+export interface TimerStatus {
+  isRunning: boolean
+  isPaused: boolean
+  remainingTime: number
+  interval: number
+  duration: number
+  mode: BreakMode
 }
 
 declare global {

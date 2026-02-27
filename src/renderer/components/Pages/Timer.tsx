@@ -1,15 +1,52 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { BreakMode, TimerStatus } from '@shared/types'
 
 export default function Timer() {
-  const [isRunning, setIsRunning] = useState(false)
-  const [selectedMode, setSelectedMode] = useState('hard')
+  const [timerStatus, setTimerStatus] = useState<TimerStatus>({
+    isRunning: false,
+    isPaused: false,
+    remainingTime: 0,
+    interval: 20,
+    duration: 20,
+    mode: 'hard'
+  })
+  const [selectedMode, setSelectedMode] = useState<BreakMode>('hard')
   const [breakInterval, setBreakInterval] = useState(20)
   const [breakDuration, setBreakDuration] = useState(20)
 
+  useEffect(() => {
+    // Load initial timer status
+    window.electronAPI.getTimerStatus().then((status) => {
+      setTimerStatus(status)
+      setSelectedMode(status.mode)
+      setBreakInterval(status.interval)
+      setBreakDuration(status.duration)
+    })
+
+    // Listen for timer updates
+    window.electronAPI.onTimerStatus((status) => {
+      setTimerStatus(status)
+    })
+  }, [])
+
+  // Auto-restart timer when settings change
+  useEffect(() => {
+    // Check if settings have changed
+    const settingsChanged = 
+      selectedMode !== timerStatus.mode ||
+      breakInterval !== timerStatus.interval ||
+      breakDuration !== timerStatus.duration
+
+    if (settingsChanged) {
+      // Restart timer with new settings - always running, just update config
+      window.electronAPI.startTimer(breakInterval, breakDuration, selectedMode)
+    }
+  }, [selectedMode, breakInterval, breakDuration])
+
   const modes = [
-    { id: 'hard', name: 'Hard Mode', description: 'Full screen lock' },
-    { id: 'soft', name: 'Soft Mode', description: 'Gentle reminder' },
-    { id: 'smart', name: 'Smart Mode', description: 'Auto-detect' }
+    { id: 'hard' as BreakMode, name: 'Hard Mode', description: 'Full screen lock' },
+    { id: 'soft' as BreakMode, name: 'Soft Mode', description: 'Gentle reminder' },
+    { id: 'smart' as BreakMode, name: 'Smart Mode', description: 'Auto-detect' }
   ]
 
   const presets = [
@@ -23,6 +60,20 @@ export default function Timer() {
     setBreakDuration(preset.duration)
   }
 
+  const handlePauseResume = () => {
+    if (timerStatus.isPaused) {
+      window.electronAPI.resumeTimer()
+    } else {
+      window.electronAPI.pauseTimer()
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -33,21 +84,17 @@ export default function Timer() {
       {/* Timer Display */}
       <div className="bg-card p-8 rounded-lg border border-border text-center">
         <div className="text-6xl font-mono font-bold text-primary mb-4">
-          {String(breakInterval).padStart(2, '0')}:00
+          {formatTime(timerStatus.remainingTime)}
         </div>
-        <p className="text-muted-foreground mb-6">Next break in</p>
+        <p className="text-muted-foreground mb-6">
+          {timerStatus.isPaused ? 'BlinkBreak paused' : 'Next BlinkBreak in'}
+        </p>
         <div className="flex gap-4 justify-center">
           <button 
-            onClick={() => setIsRunning(!isRunning)}
+            onClick={handlePauseResume}
             className="px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 font-medium transition-opacity"
           >
-            {isRunning ? 'Stop Timer' : 'Start Timer'}
-          </button>
-          <button 
-            disabled={!isRunning}
-            className="px-8 py-3 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            Pause
+            {timerStatus.isPaused ? 'Start BlinkBreak' : 'Pause BlinkBreak'}
           </button>
         </div>
       </div>
@@ -99,6 +146,20 @@ export default function Timer() {
             </div>
           )}
         </div>
+        
+        {timerStatus.isPaused ? (
+          <div className="mt-4 p-3 bg-destructive/10 rounded-lg border border-destructive/30">
+            <p className="text-sm text-foreground">
+              ⚠️ BlinkBreak is paused - settings changes will apply when you resume
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/30">
+            <p className="text-sm text-foreground">
+              💡 Changing settings will restart BlinkBreak with new configuration
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Interval Settings */}
@@ -108,19 +169,33 @@ export default function Timer() {
           <div>
             <div className="flex justify-between mb-2">
               <label className="text-foreground font-medium">Break Interval</label>
-              <span className="text-primary font-semibold">{breakInterval} minutes</span>
+              <span className="text-primary font-semibold">{breakInterval} {breakInterval === 1 ? 'minute' : 'minutes'}</span>
             </div>
-            <input 
-              type="range" 
-              min="5" 
-              max="60" 
-              value={breakInterval}
-              onChange={(e) => setBreakInterval(Number(e.target.value))}
-              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>5 min</span>
-              <span>60 min</span>
+            <div className="relative">
+              <input 
+                type="range" 
+                min="5" 
+                max="60" 
+                step="5"
+                value={breakInterval}
+                onChange={(e) => setBreakInterval(Number(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                style={{
+                  background: `linear-gradient(to right, 
+                    hsl(var(--primary)) 0%, 
+                    hsl(var(--primary)) ${((breakInterval - 5) / 55) * 100}%, 
+                    hsl(var(--muted)) ${((breakInterval - 5) / 55) * 100}%, 
+                    hsl(var(--muted)) 100%)`
+                }}
+              />
+              <div className="flex justify-between mt-2 px-0.5">
+                {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map((val) => (
+                  <div key={val} className="flex flex-col items-center -ml-1 first:ml-0 last:mr-0">
+                    <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mb-1"></div>
+                    <span className="text-[10px] text-muted-foreground">{val}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -129,17 +204,31 @@ export default function Timer() {
               <label className="text-foreground font-medium">Break Duration</label>
               <span className="text-primary font-semibold">{breakDuration} seconds</span>
             </div>
-            <input 
-              type="range" 
-              min="10" 
-              max="60" 
-              value={breakDuration}
-              onChange={(e) => setBreakDuration(Number(e.target.value))}
-              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>10 sec</span>
-              <span>60 sec</span>
+            <div className="relative">
+              <input 
+                type="range" 
+                min="5" 
+                max="60" 
+                step="5"
+                value={breakDuration}
+                onChange={(e) => setBreakDuration(Number(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                style={{
+                  background: `linear-gradient(to right, 
+                    hsl(var(--primary)) 0%, 
+                    hsl(var(--primary)) ${((breakDuration - 5) / 55) * 100}%, 
+                    hsl(var(--muted)) ${((breakDuration - 5) / 55) * 100}%, 
+                    hsl(var(--muted)) 100%)`
+                }}
+              />
+              <div className="flex justify-between mt-2 px-0.5">
+                {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map((val) => (
+                  <div key={val} className="flex flex-col items-center -ml-1 first:ml-0 last:mr-0">
+                    <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mb-1"></div>
+                    <span className="text-[10px] text-muted-foreground">{val}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
