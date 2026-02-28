@@ -31,7 +31,12 @@ const electronAPI: ElectronAPI = {
   },
   updateTrayStatus: (status) => {
     ipcRenderer.send('update-tray-status', status)
-  }
+  },
+  
+  // Auto-launch
+  getAutoLaunchStatus: () => ipcRenderer.invoke('get-auto-launch-status'),
+  enableAutoLaunch: () => ipcRenderer.invoke('enable-auto-launch'),
+  disableAutoLaunch: () => ipcRenderer.invoke('disable-auto-launch')
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

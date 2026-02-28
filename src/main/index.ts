@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
+import AutoLaunch from 'auto-launch'
 import { SettingsManager } from './storage'
 import { TimerManager } from './timer'
 import { TrayManager } from './tray'
@@ -11,6 +12,12 @@ let trayManager: TrayManager
 let isQuitting = false
 
 const isDev = process.env.NODE_ENV === 'development'
+
+// Auto-launch configuration
+const autoLauncher = new AutoLaunch({
+  name: 'BlinkBreak',
+  path: app.getPath('exe')
+})
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -63,11 +70,19 @@ app.whenReady().then(() => {
     // Create system tray
     trayManager.createTray()
     
-    // Auto-start timer with default settings after window is ready
+    // Enable auto-launch by default -> toggled in settings
+    autoLauncher.isEnabled().then((isEnabled: boolean) => {
+      if (!isEnabled) {
+        autoLauncher.enable()
+      }
+    })
+    
+    // Auto-start timer with saved settings after window is ready
     mainWindow.webContents.once('did-finish-load', () => {
-      // Start with default: 20 min interval, 20 sec duration, Hard mode
+      // Load saved settings or use defaults
+      const settings = settingsManager.getSettings()
       setTimeout(() => {
-        timerManager.start(20, 20, 'hard')
+        timerManager.start(settings.interval, settings.duration, settings.mode)
       }, 2000) // Wait 2 seconds after loading screen
     })
   }
@@ -103,6 +118,8 @@ ipcMain.on('set-theme', (_, theme) => {
 // IPC Handlers - Timer
 ipcMain.on('start-timer', (_, { interval, duration, mode }) => {
   timerManager.start(interval, duration, mode)
+  // Save settings when timer is started with new values
+  settingsManager.updateTimerSettings(interval, duration, mode)
 })
 
 ipcMain.on('stop-timer', () => {
@@ -128,4 +145,29 @@ ipcMain.handle('get-timer-status', () => {
 // IPC Handler - Update tray with timer status
 ipcMain.on('update-tray-status', (_, status) => {
   trayManager.updateTimerStatus(status)
+})
+
+// IPC Handlers - Auto-launch
+ipcMain.handle('get-auto-launch-status', async () => {
+  return await autoLauncher.isEnabled()
+})
+
+ipcMain.handle('enable-auto-launch', async () => {
+  try {
+    await autoLauncher.enable()
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to enable auto-launch:', error)
+    return { success: false, error }
+  }
+})
+
+ipcMain.handle('disable-auto-launch', async () => {
+  try {
+    await autoLauncher.disable()
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to disable auto-launch:', error)
+    return { success: false, error }
+  }
 })

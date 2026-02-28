@@ -2,7 +2,7 @@ import Store from 'electron-store'
 import { Settings } from '@shared/types'
 
 const defaultSettings: Settings = {
-  mode: 'soft',
+  mode: 'hard',
   interval: 20,
   duration: 20,
   autoLaunch: false,
@@ -47,5 +47,13 @@ export class SettingsManager {
 
   saveSettings(settings: Settings): void {
     this.store.set('settings', settings)
+  }
+
+  updateTimerSettings(interval: number, duration: number, mode: string): void {
+    const settings = this.getSettings()
+    settings.interval = interval
+    settings.duration = duration
+    settings.mode = mode as any
+    this.saveSettings(settings)
   }
 }

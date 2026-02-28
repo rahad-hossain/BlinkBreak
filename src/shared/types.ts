@@ -67,6 +67,11 @@ export interface ElectronAPI {
   onTrayTogglePause: (callback: () => void) => void
   onUpdateTray: (callback: (status: TimerStatus) => void) => void
   updateTrayStatus: (status: TimerStatus) => void
+  
+  // Auto-launch
+  getAutoLaunchStatus: () => Promise<boolean>
+  enableAutoLaunch: () => Promise<{ success: boolean; error?: any }>
+  disableAutoLaunch: () => Promise<{ success: boolean; error?: any }>
 }
 
 export interface TimerStatus {

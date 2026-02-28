@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../../store/store'
 
 export default function Settings() {
@@ -10,6 +10,30 @@ export default function Settings() {
   const [hydrationReminder, setHydrationReminder] = useState(false)
   const [smartMode, setSmartMode] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
+
+  // Load auto-launch status on mount
+  useEffect(() => {
+    window.electronAPI.getAutoLaunchStatus().then((enabled) => {
+      setAutoLaunch(enabled)
+    })
+  }, [])
+
+  // Handle auto-launch toggle
+  const handleAutoLaunchToggle = async () => {
+    const newValue = !autoLaunch
+    
+    if (newValue) {
+      const result = await window.electronAPI.enableAutoLaunch()
+      if (result.success) {
+        setAutoLaunch(true)
+      }
+    } else {
+      const result = await window.electronAPI.disableAutoLaunch()
+      if (result.success) {
+        setAutoLaunch(false)
+      }
+    }
+  }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
     <button 
@@ -42,7 +66,7 @@ export default function Settings() {
               <div className="text-foreground font-medium">Auto-launch on startup</div>
               <div className="text-sm text-muted-foreground">Start BlinkBreak when you log in</div>
             </div>
-            <Toggle enabled={autoLaunch} onChange={() => setAutoLaunch(!autoLaunch)} />
+            <Toggle enabled={autoLaunch} onChange={handleAutoLaunchToggle} />
           </div>
           <div className="flex items-center justify-between">
             <div>
