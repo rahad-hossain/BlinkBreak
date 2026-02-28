@@ -6,7 +6,7 @@ export default function LoadingScreen() {
           <img 
             src="/logo.jpg" 
             alt="BlinkBreak Logo" 
-            className="w-32 h-32 rounded-2xl shadow-2xl animate-pulse border-2 border-primary/30"
+            className="w-32 h-32 rounded-2xl shadow-2xl animate-pulse logo-border"
           />
         </div>
         <h1 className="text-4xl font-bold text-primary">BlinkBreak</h1>

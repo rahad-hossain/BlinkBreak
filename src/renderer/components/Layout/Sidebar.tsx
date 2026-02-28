@@ -21,7 +21,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           <img 
             src="/logo.jpg" 
             alt="BlinkBreak Logo" 
-            className="w-10 h-10 rounded-lg border-2 border-primary/30"
+            className="w-10 h-10 rounded-lg logo-border"
           />
           <div>
             <h1 className="text-xl font-bold text-primary">BlinkBreak</h1>
