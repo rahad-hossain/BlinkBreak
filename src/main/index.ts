@@ -13,6 +13,24 @@ let isQuitting = false
 
 const isDev = process.env.NODE_ENV === 'development'
 
+// Single instance lock
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  // quit running one
+  app.quit()
+} else {
+  // This is the first instance
+  app.on('second-instance', () => {
+    // tried focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      if (!mainWindow.isVisible()) mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+}
+
 // Auto-launch configuration
 const autoLauncher = new AutoLaunch({
   name: 'BlinkBreak',
@@ -20,6 +38,10 @@ const autoLauncher = new AutoLaunch({
 })
 
 function createWindow() {
+  const iconPath = isDev 
+    ? path.join(__dirname, '../../build/logo.ico')
+    : path.join(process.resourcesPath, 'logo.ico')
+  
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 700,
@@ -31,6 +53,8 @@ function createWindow() {
       nodeIntegration: false
     },
     frame: true,
+    autoHideMenuBar: true,
+    icon: iconPath,
     show: false
   })
 

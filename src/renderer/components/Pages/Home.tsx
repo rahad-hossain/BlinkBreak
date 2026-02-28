@@ -9,7 +9,7 @@ export default function Home({ onNavigate }: HomeProps) {
       <div className="text-center py-12">
         <div className="flex justify-center mb-6">
           <img 
-            src="/logo.jpg" 
+            src="./logo.jpg" 
             alt="BlinkBreak Logo" 
             className="w-24 h-24 rounded-2xl shadow-lg logo-border"
           />

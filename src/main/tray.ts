@@ -17,16 +17,15 @@ export class TrayManager {
 
   createTray() {
     // Create tray icon from logo
-    const iconPath = path.join(__dirname, '../../public/logo.jpg')
+    const isDev = process.env.NODE_ENV === 'development'
+    const iconPath = isDev
+      ? path.join(__dirname, '../../build/logo.ico')
+      : path.join(process.resourcesPath, 'logo.ico')
+    
     let trayIcon = nativeImage.createFromPath(iconPath)
     
     // Resize icon for tray (16x16 for Windows)
     trayIcon = trayIcon.resize({ width: 16, height: 16 })
-    
-    // Make icon lighter (similar to homepage logo)
-    // Note: This creates a lighter version by adjusting the image
-    const buffer = trayIcon.toPNG()
-    trayIcon = nativeImage.createFromBuffer(buffer)
     
     this.tray = new Tray(trayIcon)
     this.tray.setToolTip('BlinkBreak - Eye Care Assistant')
@@ -55,11 +54,16 @@ export class TrayManager {
   private updateTrayMenu() {
     if (!this.tray) return
 
+    const isDev = process.env.NODE_ENV === 'development'
+    const iconPath = isDev
+      ? path.join(__dirname, '../../build/logo.ico')
+      : path.join(process.resourcesPath, 'logo.ico')
+
     const contextMenu = Menu.buildFromTemplate([
       {
         label: 'BlinkBreak',
         enabled: false,
-        icon: nativeImage.createFromPath(path.join(__dirname, '../../public/logo.jpg')).resize({ width: 16, height: 16 })
+        icon: nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
       },
       { type: 'separator' },
       {

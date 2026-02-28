@@ -19,7 +19,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
           <img 
-            src="/logo.jpg" 
+            src="./logo.jpg" 
             alt="BlinkBreak Logo" 
             className="w-10 h-10 rounded-lg logo-border"
           />
