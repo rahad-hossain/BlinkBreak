@@ -4,7 +4,7 @@ export default function LoadingScreen() {
       <div className="text-center space-y-6">
         <div className="flex justify-center mb-6">
           <img 
-            src="/logo.jpg" 
+            src="./logo.jpg" 
             alt="BlinkBreak Logo" 
             className="w-32 h-32 rounded-2xl shadow-2xl animate-pulse logo-border"
           />
