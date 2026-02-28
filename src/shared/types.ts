@@ -62,6 +62,11 @@ export interface ElectronAPI {
   onTimerStatus: (callback: (status: TimerStatus) => void) => void
   onBreakStart: (callback: (data: { mode: BreakMode; duration: number }) => void) => void
   onBreakEnd: (callback: () => void) => void
+  
+  // Tray
+  onTrayTogglePause: (callback: () => void) => void
+  onUpdateTray: (callback: (status: TimerStatus) => void) => void
+  updateTrayStatus: (status: TimerStatus) => void
 }
 
 export interface TimerStatus {

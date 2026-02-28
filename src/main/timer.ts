@@ -137,14 +137,19 @@ export class TimerManager {
   }
 
   private sendStatus() {
-    this.mainWindow?.webContents.send('timer-status', {
+    const status = {
       isRunning: this.isRunning,
       isPaused: this.isPaused,
       remainingTime: this.remainingTime,
       interval: this.interval,
       duration: this.duration,
       mode: this.mode
-    })
+    }
+    
+    this.mainWindow?.webContents.send('timer-status', status)
+    
+    // Update tray with timer status
+    this.mainWindow?.webContents.send('update-tray', status)
   }
 
   getStatus() {

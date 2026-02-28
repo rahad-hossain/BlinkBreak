@@ -42,6 +42,22 @@ function App() {
     window.electronAPI.onBreakEnd(() => {
       setBreakActive(false)
     })
+
+    // Listen for tray pause/resume toggle
+    window.electronAPI.onTrayTogglePause(() => {
+      window.electronAPI.getTimerStatus().then((status) => {
+        if (status.isPaused) {
+          window.electronAPI.resumeTimer()
+        } else {
+          window.electronAPI.pauseTimer()
+        }
+      })
+    })
+
+    // Listen for timer status updates to send to tray
+    window.electronAPI.onUpdateTray((status) => {
+      window.electronAPI.updateTrayStatus(status)
+    })
   }, [])
 
   useEffect(() => {

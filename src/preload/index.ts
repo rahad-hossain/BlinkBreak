@@ -20,6 +20,17 @@ const electronAPI: ElectronAPI = {
   },
   onBreakEnd: (callback) => {
     ipcRenderer.on('break-end', () => callback())
+  },
+  
+  // Tray
+  onTrayTogglePause: (callback) => {
+    ipcRenderer.on('tray-toggle-pause', () => callback())
+  },
+  onUpdateTray: (callback) => {
+    ipcRenderer.on('update-tray', (_, status) => callback(status))
+  },
+  updateTrayStatus: (status) => {
+    ipcRenderer.send('update-tray-status', status)
   }
 }
 
