@@ -12,6 +12,14 @@
   A desktop application designed to reduce eye strain and promote healthy screen habits through intelligent break reminders and display optimization.
 </p>
 
+<p align="center">
+  <a href="https://github.com/rahad-hossain/BlinkBreak/releases/latest">
+    <img src="https://img.shields.io/badge/version-1.0.0-3daa8f" alt="Version 1.0.0">
+  </a>
+  <img src="https://img.shields.io/badge/platform-Windows-3daa8f" alt="Windows">
+  <img src="https://img.shields.io/badge/license-MIT-3daa8f" alt="MIT License">
+</p>
+
 ---
 
 ## Overview
@@ -20,50 +28,72 @@ BlinkBreak is a cross-platform desktop application built with Electron that help
 
 ---
 
-## Features
+## Screenshots
 
-### Break Management
-- **Hard Mode** - Full screen lock with countdown timer to enforce breaks
-- **Soft Mode** - Non-intrusive popup notifications that can be dismissed
-- **Smart Mode** - Automatic detection of meetings and presentations to avoid interruptions
-- **Customizable Intervals** - Configure break frequency and duration (5-60 minutes)
-- **Quick Presets** - 20-20-20 Rule, Pomodoro, and Frequent break templates
-
-### Display Optimization
-- **Monitor Controls** - Adjust screen brightness and contrast with preset configurations
-- **Blue Light Filter** - Reduce eye strain with adjustable warm color temperature overlay
-- **Environment Presets** - Outdoor, Indoor, Evening, and Night Mode settings
-- **Theme System** - Eye-friendly Dark Neon theme and clean White theme
-
-### Health & Productivity
-- **Posture Reminders** - Periodic alerts to maintain proper sitting posture
-- **Hydration Tracking** - Regular reminders to stay hydrated
-- **Statistics Dashboard** - Track break completion, screen time, and streak data
-- **Focus Mode** - Pomodoro timer with optional website blocking
-
-### System Integration
-- **System Tray** - Persistent background operation with quick access menu
-- **Auto-Launch** - Optional startup on system boot
-- **Global Shortcuts** - Keyboard shortcuts for quick actions
-- **Local Storage** - All data stored locally with no external dependencies
+<p align="center">
+  <img src="public/sample-home.png" alt="Home Page" width="45%">
+  <img src="public/sample-timer.png" alt="Timer Page" width="45%">
+</p>
 
 ---
 
-## Installation
+## Features
 
-### Windows
-Download the latest installer from the releases page. BlinkBreak is primarily developed and tested for Windows.
+- ✓ **Smart Break Timer** - Customizable intervals (5-60 min) and duration (5-60 sec)
+- ✓ **Hard Mode** - Full screen lock on all monitors
+- ✓ **Soft Mode** - Gentle popup notification
+- ✓ **Multi-Monitor Support** - Covers all displays with different DPI
+- ✓ **System Tray** - Runs in background with live timer status
+- ✓ **Auto-Launch** - Start with Windows (toggle in Settings)
+- ✓ **Settings Persistence** - Timer settings survive restarts
+- ✓ **Dual Themes** - Dark Neon (eye-friendly) and White
+- ✓ **Single Instance** - Prevents multiple app instances
 
-### Building from Source
+### Coming Soon
+- ○ Statistics tracking (UI ready)
+- ○ Smart Mode (meeting detection)
+- ○ Health reminders (posture, hydration)
+- ○ Monitor controls (brightness, contrast)
+- ○ Blue light filter
+- ○ Global keyboard shortcuts
+
+---
+
+## Download
+
+**Latest Release:** [v1.0.0](https://github.com/rahad-hossain/BlinkBreak/releases/latest)
+
+**Installer (Recommended):** `BlinkBreak Setup 1.0.0.exe`
+- Installs to Program Files with shortcuts
+
+**Portable:** `BlinkBreak 1.0.0.exe`
+- No installation required
+
+**Requirements:** Windows 10/11 (64-bit)
+
+---
+
+## Quick Start
+
+1. Download and install BlinkBreak
+2. App starts with default: 20 min interval, 20 sec break
+3. Customize timer in **Timer** tab
+4. App runs in system tray - click to show/hide
+5. Enable/disable auto-launch in **Settings**
+
+---
+
+## Building from Source
+
 ```bash
-# Clone the repository
-git clone https://github.com/rahad-hossain/blinkbreak.git
-cd blinkbreak
+# Clone repository
+git clone https://github.com/rahad-hossain/BlinkBreak.git
+cd BlinkBreak
 
 # Install dependencies
 npm install
 
-# Run in development mode
+# Run in development
 npm run dev
 
 # Build for production
@@ -73,24 +103,14 @@ npm run build:electron
 
 ---
 
-## Usage
-
-1. Launch BlinkBreak and configure your preferred break intervals
-2. Select a break mode (Hard, Soft, or Smart)
-3. Optionally adjust display settings and enable health reminders
-4. The application will run in the system tray and notify you when breaks are due
-5. View your statistics to track progress and maintain consistency
-
----
-
 ## Technology Stack
 
-- **Electron** - Cross-platform desktop framework
-- **React** - User interface library
-- **TypeScript** - Type-safe development
-- **TailwindCSS** - Utility-first styling with custom theme
-- **Zustand** - Lightweight state management
-- **Lucide React** - Icon library
+- **Electron 28** - Desktop framework
+- **React 18** - UI library
+- **TypeScript** - Type safety
+- **TailwindCSS** - Styling
+- **Zustand** - State management
+- **electron-store** - Data persistence
 
 ---
 
@@ -121,3 +141,10 @@ npm run lint            # Run ESLint
 ## Design Principles
 
 BlinkBreak is designed with eye health as the primary focus. The color scheme uses warm tones to reduce blue light exposure, maintains high contrast without harsh whites, and implements reduced saturation to prevent eye fatigue. The interface is minimal and intuitive, with smooth animations that respect user accessibility preferences. All user data is stored locally with no telemetry or external server communication.
+
+---
+
+## Support
+
+- [Report Issues](https://github.com/rahad-hossain/BlinkBreak/issues)
+- [View Releases](https://github.com/rahad-hossain/BlinkBreak/releases)
