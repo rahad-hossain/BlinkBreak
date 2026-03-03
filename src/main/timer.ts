@@ -13,10 +13,14 @@ export class TimerManager {
   private startTime: number = 0
   private mainWindow: BrowserWindow | null = null
   private breakWindowManager: BreakWindowManager
+  private onBreakTaken?: (duration: number) => void
+  private onBreakSkipped?: (duration: number) => void
 
-  constructor(mainWindow: BrowserWindow) {
+  constructor(mainWindow: BrowserWindow, onBreakTaken?: (duration: number) => void, onBreakSkipped?: (duration: number) => void) {
     this.mainWindow = mainWindow
     this.breakWindowManager = new BreakWindowManager()
+    this.onBreakTaken = onBreakTaken
+    this.onBreakSkipped = onBreakSkipped
   }
 
   start(interval: number, duration: number, mode: BreakMode) {
@@ -75,6 +79,11 @@ export class TimerManager {
   skip() {
     if (!this.isRunning) return
 
+    // Record break as skipped with duration
+    if (this.onBreakSkipped) {
+      this.onBreakSkipped(this.duration)
+    }
+
     // Close any open break windows
     this.breakWindowManager.closeAllWindows()
 
@@ -126,6 +135,11 @@ export class TimerManager {
 
     // After break duration, restart timer
     setTimeout(() => {
+      // Record break as taken with duration
+      if (this.onBreakTaken) {
+        this.onBreakTaken(this.duration)
+      }
+
       this.mainWindow?.webContents.send('break-end')
       
       if (this.isRunning) {
