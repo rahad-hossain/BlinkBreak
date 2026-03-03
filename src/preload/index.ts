@@ -36,7 +36,12 @@ const electronAPI: ElectronAPI = {
   // Auto-launch
   getAutoLaunchStatus: () => ipcRenderer.invoke('get-auto-launch-status'),
   enableAutoLaunch: () => ipcRenderer.invoke('enable-auto-launch'),
-  disableAutoLaunch: () => ipcRenderer.invoke('disable-auto-launch')
+  disableAutoLaunch: () => ipcRenderer.invoke('disable-auto-launch'),
+  
+  // Statistics
+  getStatistics: () => ipcRenderer.invoke('get-statistics'),
+  recordBreakTaken: (duration) => ipcRenderer.invoke('record-break-taken', duration),
+  recordBreakSkipped: (duration) => ipcRenderer.invoke('record-break-skipped', duration)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
