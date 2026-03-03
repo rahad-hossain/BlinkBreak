@@ -31,18 +31,62 @@ export interface Settings {
 }
 
 export interface Statistics {
-  breaksTaken: number
-  breaksSkipped: number
-  totalScreenTime: number
-  lastBreakTime: number
+  totalBreaksTaken: number
+  totalBreaksSkipped: number
+  currentStreak: number
+  longestStreak: number
+  lastBreakDate: string
   dailyStats: DailyStats[]
+  weeklyStats: WeeklyStats[]
+  monthlyStats: MonthlyStats[]
+  weekComparison: WeekComparison
+  recentActivity: BreakEvent[]
+}
+
+export interface BreakEvent {
+  timestamp: number // Unix timestamp
+  type: 'taken' | 'skipped'
+  duration: number // seconds
 }
 
 export interface DailyStats {
-  date: string
+  date: string // YYYY-MM-DD
+  breaksTaken: number
+  breaksSkipped: number
+  screenTime: number // minutes
+  completionRate: number // percentage
+}
+
+export interface WeeklyStats {
+  weekStart: string // YYYY-MM-DD (Monday)
   breaksTaken: number
   breaksSkipped: number
   screenTime: number
+  completionRate: number
+}
+
+export interface MonthlyStats {
+  month: string // YYYY-MM
+  breaksTaken: number
+  breaksSkipped: number
+  screenTime: number
+  completionRate: number
+}
+
+export interface WeekComparison {
+  currentWeek: {
+    breaksTaken: number
+    completionRate: number
+  }
+  previousWeek: {
+    breaksTaken: number
+    completionRate: number
+  }
+  improvement: {
+    breaks: number // difference
+    breaksPercent: number // percentage change
+    completionRate: number // difference in percentage points
+  }
 }
 
 export interface ElectronAPI {
@@ -72,6 +116,11 @@ export interface ElectronAPI {
   getAutoLaunchStatus: () => Promise<boolean>
   enableAutoLaunch: () => Promise<{ success: boolean; error?: any }>
   disableAutoLaunch: () => Promise<{ success: boolean; error?: any }>
+  
+  // Statistics
+  getStatistics: () => Promise<Statistics>
+  recordBreakTaken: (duration: number) => Promise<void>
+  recordBreakSkipped: (duration: number) => Promise<void>
 }
 
 export interface TimerStatus {

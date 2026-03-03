@@ -1,15 +1,18 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import path from 'path'
 import AutoLaunch from 'auto-launch'
 import { SettingsManager } from './storage'
 import { TimerManager } from './timer'
 import { TrayManager } from './tray'
+import { StatisticsManager } from './statistics'
 
 let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
 let timerManager: TimerManager
 let trayManager: TrayManager
+let statisticsManager: StatisticsManager
 let isQuitting = false
+let screenTimeTracker: NodeJS.Timeout | null = null
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -84,11 +87,16 @@ function createWindow() {
 
 app.whenReady().then(() => {
   settingsManager = new SettingsManager()
+  statisticsManager = new StatisticsManager()
   
   createWindow()
   
   if (mainWindow) {
-    timerManager = new TimerManager(mainWindow)
+    timerManager = new TimerManager(
+      mainWindow,
+      (duration) => statisticsManager.recordBreakTaken(duration),
+      (duration) => statisticsManager.recordBreakSkipped(duration)
+    )
     trayManager = new TrayManager(mainWindow)
     
     // Create system tray
@@ -100,6 +108,9 @@ app.whenReady().then(() => {
         autoLauncher.enable()
       }
     })
+    
+    // Start screen time tracking (every minute, save every 5 minutes)
+    startScreenTimeTracking()
     
     // Auto-start timer with saved settings after window is ready
     mainWindow.webContents.once('did-finish-load', () => {
@@ -128,7 +139,52 @@ app.on('window-all-closed', () => {
 // Set quitting flag when app is about to quit
 app.on('before-quit', () => {
   isQuitting = true
+  // Save statistics session end time
+  statisticsManager.onAppClose()
+  // Stop screen time tracking
+  if (screenTimeTracker) {
+    clearInterval(screenTimeTracker)
+  }
 })
+
+// Screen time tracking
+let activeMinutesBuffer = 0
+let lastSaveTime = Date.now()
+
+function startScreenTimeTracking() {
+  // Track active time every minute
+  screenTimeTracker = setInterval(() => {
+    const idleTime = powerMonitor.getSystemIdleTime()
+    
+    // If user was active in last minute (idle < 60 seconds)
+    if (idleTime < 60) {
+      activeMinutesBuffer++
+      
+      // Save to storage every 5 minutes
+      const timeSinceLastSave = Date.now() - lastSaveTime
+      if (timeSinceLastSave >= 5 * 60 * 1000) { // 5 minutes
+        statisticsManager.addScreenTime(activeMinutesBuffer)
+        activeMinutesBuffer = 0
+        lastSaveTime = Date.now()
+      }
+    }
+  }, 60000) // Check every minute
+  
+  // Handle suspend (sleep/hibernate)
+  powerMonitor.on('suspend', () => {
+    // Save any buffered time before suspend
+    if (activeMinutesBuffer > 0) {
+      statisticsManager.addScreenTime(activeMinutesBuffer)
+      activeMinutesBuffer = 0
+      lastSaveTime = Date.now()
+    }
+  })
+  
+  // Handle resume
+  powerMonitor.on('resume', () => {
+    lastSaveTime = Date.now()
+  })
+}
 
 // IPC Handlers - Settings
 ipcMain.handle('get-settings', async () => {
@@ -194,4 +250,17 @@ ipcMain.handle('disable-auto-launch', async () => {
     console.error('Failed to disable auto-launch:', error)
     return { success: false, error }
   }
+})
+
+// IPC Handlers - Statistics
+ipcMain.handle('get-statistics', async () => {
+  return statisticsManager.getStatistics()
+})
+
+ipcMain.handle('record-break-taken', async (_, duration: number) => {
+  statisticsManager.recordBreakTaken(duration)
+})
+
+ipcMain.handle('record-break-skipped', async (_, duration: number) => {
+  statisticsManager.recordBreakSkipped(duration)
 })
