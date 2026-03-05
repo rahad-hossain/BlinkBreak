@@ -5,12 +5,16 @@ import { SettingsManager } from './storage'
 import { TimerManager } from './timer'
 import { TrayManager } from './tray'
 import { StatisticsManager } from './statistics'
+import { BlueLightFilterManager } from './blueLightFilter'
+import { ColorMaskManager } from './colorMask'
 
 let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
 let timerManager: TimerManager
 let trayManager: TrayManager
 let statisticsManager: StatisticsManager
+let blueLightFilterManager: BlueLightFilterManager
+let colorMaskManager: ColorMaskManager
 let isQuitting = false
 let screenTimeTracker: NodeJS.Timeout | null = null
 
@@ -88,6 +92,8 @@ function createWindow() {
 app.whenReady().then(() => {
   settingsManager = new SettingsManager()
   statisticsManager = new StatisticsManager()
+  blueLightFilterManager = new BlueLightFilterManager()
+  colorMaskManager = new ColorMaskManager()
   
   createWindow()
   
@@ -113,9 +119,25 @@ app.whenReady().then(() => {
     startScreenTimeTracking()
     
     // Auto-start timer with saved settings after window is ready
-    mainWindow.webContents.once('did-finish-load', () => {
+    mainWindow.webContents.once('did-finish-load', async () => {
       // Load saved settings or use defaults
       const settings = settingsManager.getSettings()
+      
+      // Apply blue light filter if enabled
+      if (settings.blueLightFilter.enabled) {
+        await blueLightFilterManager.enable(settings.blueLightFilter.intensity)
+      }
+      
+      // Apply color mask if enabled
+      if (settings.colorMask.enabled) {
+        await colorMaskManager.enable(
+          settings.colorMask.intensity,
+          settings.colorMask.red,
+          settings.colorMask.green,
+          settings.colorMask.blue
+        )
+      }
+      
       setTimeout(() => {
         timerManager.start(settings.interval, settings.duration, settings.mode)
       }, 2000) // Wait 2 seconds after loading screen
@@ -137,7 +159,7 @@ app.on('window-all-closed', () => {
 })
 
 // Set quitting flag when app is about to quit
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   isQuitting = true
   // Save statistics session end time
   statisticsManager.onAppClose()
@@ -145,6 +167,10 @@ app.on('before-quit', () => {
   if (screenTimeTracker) {
     clearInterval(screenTimeTracker)
   }
+  // Clean up blue light filter
+  await blueLightFilterManager.destroy()
+  // Clean up color mask
+  await colorMaskManager.destroy()
 })
 
 // Screen time tracking
@@ -263,4 +289,62 @@ ipcMain.handle('record-break-taken', async (_, duration: number) => {
 
 ipcMain.handle('record-break-skipped', async (_, duration: number) => {
   statisticsManager.recordBreakSkipped(duration)
+})
+
+// IPC Handlers - Blue Light Filter
+ipcMain.on('enable-blue-light-filter', async (_, intensity: number) => {
+  await blueLightFilterManager.enable(intensity)
+  // Save to settings
+  const settings = settingsManager.getSettings()
+  settings.blueLightFilter.enabled = true
+  settings.blueLightFilter.intensity = intensity
+  settingsManager.saveSettings(settings)
+})
+
+ipcMain.on('disable-blue-light-filter', async () => {
+  await blueLightFilterManager.disable()
+  // Save to settings
+  const settings = settingsManager.getSettings()
+  settings.blueLightFilter.enabled = false
+  settingsManager.saveSettings(settings)
+})
+
+ipcMain.on('update-blue-light-intensity', async (_, intensity: number) => {
+  await blueLightFilterManager.updateIntensity(intensity)
+  // Save to settings
+  const settings = settingsManager.getSettings()
+  settings.blueLightFilter.intensity = intensity
+  settingsManager.saveSettings(settings)
+})
+
+// IPC Handlers - Color Mask
+ipcMain.on('enable-color-mask', async (_, { intensity, red, green, blue }) => {
+  await colorMaskManager.enable(intensity, red, green, blue)
+  // Save to settings
+  const settings = settingsManager.getSettings()
+  settings.colorMask.enabled = true
+  settings.colorMask.intensity = intensity
+  settings.colorMask.red = red
+  settings.colorMask.green = green
+  settings.colorMask.blue = blue
+  settingsManager.saveSettings(settings)
+})
+
+ipcMain.on('disable-color-mask', async () => {
+  await colorMaskManager.disable()
+  // Save to settings
+  const settings = settingsManager.getSettings()
+  settings.colorMask.enabled = false
+  settingsManager.saveSettings(settings)
+})
+
+ipcMain.on('update-color-mask', async (_, { intensity, red, green, blue }) => {
+  await colorMaskManager.updateMask(intensity, red, green, blue)
+  // Save to settings
+  const settings = settingsManager.getSettings()
+  settings.colorMask.intensity = intensity
+  settings.colorMask.red = red
+  settings.colorMask.green = green
+  settings.colorMask.blue = blue
+  settingsManager.saveSettings(settings)
 })
