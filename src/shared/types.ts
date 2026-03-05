@@ -138,6 +138,11 @@ export interface ElectronAPI {
   enableColorMask: (intensity: number, red: number, green: number, blue: number) => void
   disableColorMask: () => void
   updateColorMask: (intensity: number, red: number, green: number, blue: number) => void
+  
+  // Monitor Controls
+  setMonitorBrightness: (value: number) => Promise<boolean>
+  setMonitorContrast: (value: number) => Promise<boolean>
+  getMonitorBrightness: () => Promise<number>
 }
 
 export interface TimerStatus {

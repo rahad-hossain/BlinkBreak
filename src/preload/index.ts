@@ -51,7 +51,12 @@ const electronAPI: ElectronAPI = {
   // Color Mask
   enableColorMask: (intensity, red, green, blue) => ipcRenderer.send('enable-color-mask', { intensity, red, green, blue }),
   disableColorMask: () => ipcRenderer.send('disable-color-mask'),
-  updateColorMask: (intensity, red, green, blue) => ipcRenderer.send('update-color-mask', { intensity, red, green, blue })
+  updateColorMask: (intensity, red, green, blue) => ipcRenderer.send('update-color-mask', { intensity, red, green, blue }),
+  
+  // Monitor Controls
+  setMonitorBrightness: (value) => ipcRenderer.invoke('set-monitor-brightness', value),
+  setMonitorContrast: (value) => ipcRenderer.invoke('set-monitor-contrast', value),
+  getMonitorBrightness: () => ipcRenderer.invoke('get-monitor-brightness')
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
