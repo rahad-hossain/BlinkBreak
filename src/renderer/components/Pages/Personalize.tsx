@@ -43,6 +43,13 @@ export default function Personalize() {
       )
       setSelectedColorIndex(matchingIndex >= 0 ? matchingIndex : 0)
     })
+    
+    // Load current monitor brightness
+    window.electronAPI.getMonitorBrightness().then((value) => {
+      setBrightness(value)
+    }).catch(() => {
+      console.log('Could not get monitor brightness')
+    })
   }, [])
 
   // Handle blue light filter toggle
@@ -106,6 +113,10 @@ export default function Personalize() {
   const applyPreset = (preset: typeof brightnessPresets[0]) => {
     setBrightness(preset.brightness)
     setContrast(preset.contrast)
+    
+    // Apply to actual monitor
+    window.electronAPI.setMonitorBrightness(preset.brightness)
+    window.electronAPI.setMonitorContrast(preset.contrast)
   }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
@@ -163,7 +174,11 @@ export default function Personalize() {
               min="0" 
               max="100" 
               value={brightness}
-              onChange={(e) => setBrightness(Number(e.target.value))}
+              onChange={(e) => {
+                const value = Number(e.target.value)
+                setBrightness(value)
+                window.electronAPI.setMonitorBrightness(value)
+              }}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
@@ -182,7 +197,11 @@ export default function Personalize() {
               min="0" 
               max="100" 
               value={contrast}
-              onChange={(e) => setContrast(Number(e.target.value))}
+              onChange={(e) => {
+                const value = Number(e.target.value)
+                setContrast(value)
+                window.electronAPI.setMonitorContrast(value)
+              }}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
@@ -194,7 +213,7 @@ export default function Personalize() {
 
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            💡 Tip: Monitor controls will sync with your display settings (Coming in Day 5-6)
+            💡 If brightness control doesn't work on your monitor, switch it from Eye Care/Reader mode to Normal/Standard mode in the monitor's OSD menu. Special display modes often disable DDC/CI communication.
           </p>
         </div>
       </div>
