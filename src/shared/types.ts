@@ -14,6 +14,13 @@ export interface Settings {
     startTime: string
     endTime: string
   }
+  colorMask: {
+    enabled: boolean
+    intensity: number
+    red: number
+    green: number
+    blue: number
+  }
   postureReminder: {
     enabled: boolean
     interval: number
@@ -121,6 +128,16 @@ export interface ElectronAPI {
   getStatistics: () => Promise<Statistics>
   recordBreakTaken: (duration: number) => Promise<void>
   recordBreakSkipped: (duration: number) => Promise<void>
+  
+  // Blue Light Filter
+  enableBlueLightFilter: (intensity: number) => void
+  disableBlueLightFilter: () => void
+  updateBlueLightIntensity: (intensity: number) => void
+  
+  // Color Mask
+  enableColorMask: (intensity: number, red: number, green: number, blue: number) => void
+  disableColorMask: () => void
+  updateColorMask: (intensity: number, red: number, green: number, blue: number) => void
 }
 
 export interface TimerStatus {
