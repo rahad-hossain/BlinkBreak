@@ -7,6 +7,7 @@ import { TrayManager } from './tray'
 import { StatisticsManager } from './statistics'
 import { BlueLightFilterManager } from './blueLightFilter'
 import { ColorMaskManager } from './colorMask'
+import { MonitorControlManager } from './monitorControl'
 
 let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
@@ -15,6 +16,7 @@ let trayManager: TrayManager
 let statisticsManager: StatisticsManager
 let blueLightFilterManager: BlueLightFilterManager
 let colorMaskManager: ColorMaskManager
+let monitorControlManager: MonitorControlManager
 let isQuitting = false
 let screenTimeTracker: NodeJS.Timeout | null = null
 
@@ -94,6 +96,7 @@ app.whenReady().then(() => {
   statisticsManager = new StatisticsManager()
   blueLightFilterManager = new BlueLightFilterManager()
   colorMaskManager = new ColorMaskManager()
+  monitorControlManager = new MonitorControlManager()
   
   createWindow()
   
@@ -347,4 +350,17 @@ ipcMain.on('update-color-mask', async (_, { intensity, red, green, blue }) => {
   settings.colorMask.green = green
   settings.colorMask.blue = blue
   settingsManager.saveSettings(settings)
+})
+
+// IPC Handlers - Monitor Controls
+ipcMain.handle('set-monitor-brightness', async (_, value: number) => {
+  return await monitorControlManager.setBrightness(value)
+})
+
+ipcMain.handle('set-monitor-contrast', async (_, value: number) => {
+  return await monitorControlManager.setContrast(value)
+})
+
+ipcMain.handle('get-monitor-brightness', async () => {
+  return await monitorControlManager.getBrightness()
 })
