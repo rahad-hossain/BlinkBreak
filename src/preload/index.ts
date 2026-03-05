@@ -41,7 +41,17 @@ const electronAPI: ElectronAPI = {
   // Statistics
   getStatistics: () => ipcRenderer.invoke('get-statistics'),
   recordBreakTaken: (duration) => ipcRenderer.invoke('record-break-taken', duration),
-  recordBreakSkipped: (duration) => ipcRenderer.invoke('record-break-skipped', duration)
+  recordBreakSkipped: (duration) => ipcRenderer.invoke('record-break-skipped', duration),
+  
+  // Blue Light Filter
+  enableBlueLightFilter: (intensity) => ipcRenderer.send('enable-blue-light-filter', intensity),
+  disableBlueLightFilter: () => ipcRenderer.send('disable-blue-light-filter'),
+  updateBlueLightIntensity: (intensity) => ipcRenderer.send('update-blue-light-intensity', intensity),
+  
+  // Color Mask
+  enableColorMask: (intensity, red, green, blue) => ipcRenderer.send('enable-color-mask', { intensity, red, green, blue }),
+  disableColorMask: () => ipcRenderer.send('disable-color-mask'),
+  updateColorMask: (intensity, red, green, blue) => ipcRenderer.send('update-color-mask', { intensity, red, green, blue })
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

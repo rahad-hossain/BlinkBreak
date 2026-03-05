@@ -9,10 +9,17 @@ const defaultSettings: Settings = {
   theme: 'dark-neon',
   blueLightFilter: {
     enabled: false,
-    intensity: 50,
+    intensity: 30,
     schedule: false,
     startTime: '20:00',
     endTime: '06:00'
+  },
+  colorMask: {
+    enabled: false,
+    intensity: 30,
+    red: 34,
+    green: 197,
+    blue: 94
   },
   postureReminder: {
     enabled: false,
