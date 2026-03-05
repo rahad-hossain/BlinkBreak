@@ -29,7 +29,7 @@ export default function Timer() {
     })
   }, [])
 
-  // Auto-restart timer when settings change
+  // Auto-restart timer when settings change (only if timer is already running)
   useEffect(() => {
     // Check if settings have changed
     const settingsChanged = 
@@ -37,8 +37,8 @@ export default function Timer() {
       breakInterval !== timerStatus.interval ||
       breakDuration !== timerStatus.duration
 
-    if (settingsChanged) {
-      // Restart timer with new settings - always running, just update config
+    // Only restart if timer is already running and settings changed
+    if (settingsChanged && timerStatus.isRunning) {
       window.electronAPI.startTimer(breakInterval, breakDuration, selectedMode)
     }
   }, [selectedMode, breakInterval, breakDuration])
