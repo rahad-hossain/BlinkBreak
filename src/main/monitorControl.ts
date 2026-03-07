@@ -38,7 +38,11 @@ export class MonitorControlManager {
    */
   private async setBrightnessWindows(value: number): Promise<boolean> {
     try {
-      const scriptPath = require('path').join(__dirname, '../../helpers/SetAllMonitorsBrightness.ps1')
+      const isDev = process.env.NODE_ENV === 'development'
+      const scriptPath = isDev
+        ? require('path').join(__dirname, '../../helpers/SetAllMonitorsBrightness.ps1')
+        : require('path').join(process.resourcesPath, 'helpers/SetAllMonitorsBrightness.ps1')
+      
       const { stdout } = await execAsync(
         `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -Brightness ${value}`,
         { timeout: 5000 }
@@ -62,7 +66,10 @@ export class MonitorControlManager {
    */
   private async setBrightnessLinux(value: number): Promise<boolean> {
     try {
-      const scriptPath = require('path').join(__dirname, '../../helpers/set-brightness-linux.sh')
+      const isDev = process.env.NODE_ENV === 'development'
+      const scriptPath = isDev
+        ? require('path').join(__dirname, '../../helpers/set-brightness-linux.sh')
+        : require('path').join(process.resourcesPath, 'helpers/set-brightness-linux.sh')
       
       await execAsync(`chmod +x "${scriptPath}"`, { timeout: 1000 }).catch(() => {})
       

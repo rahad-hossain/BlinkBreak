@@ -9,6 +9,8 @@ files:
 extraResources:
   - from: build/logo.ico
     to: logo.ico
+  - from: helpers
+    to: helpers
 win:
   target:
     - nsis
