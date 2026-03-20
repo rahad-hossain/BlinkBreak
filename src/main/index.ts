@@ -109,7 +109,7 @@ app.whenReady().then(() => {
       (duration) => statisticsManager.recordBreakSkipped(duration)
     )
     trayManager = new TrayManager(mainWindow)
-    reminderManager = new ReminderManager(mainWindow)
+    reminderManager = new ReminderManager()
     
     // Create system tray
     trayManager.createTray()
@@ -392,4 +392,8 @@ ipcMain.on('set-reminder-config', (_, { type, enabled, intervalMinutes }) => {
     settings.hydrationReminder.interval = intervalMinutes
   }
   settingsManager.saveSettings(settings)
+})
+
+ipcMain.on('snooze-reminder', (_, { type, minutes }) => {
+  reminderManager.snooze(type, minutes)
 })
