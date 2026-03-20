@@ -143,6 +143,10 @@ export interface ElectronAPI {
   setMonitorBrightness: (value: number) => Promise<boolean>
   setMonitorContrast: (value: number) => Promise<boolean>
   getMonitorBrightness: () => Promise<number>
+
+  // Reminders
+  setReminderConfig: (type: 'posture' | 'hydration', enabled: boolean, intervalMinutes: number) => void
+  snoozeReminder: (type: 'posture' | 'hydration', minutes: number) => void
 }
 
 export interface TimerStatus {

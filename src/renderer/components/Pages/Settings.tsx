@@ -4,49 +4,59 @@ import { useStore } from '../../store/store'
 export default function Settings() {
   const { theme, setTheme } = useStore()
   const [autoLaunch, setAutoLaunch] = useState(true)
-  const [minimizeToTray, setMinimizeToTray] = useState(true)
+  const [minimizeToTray] = useState(true)
   const [soundNotifications, setSoundNotifications] = useState(false)
-  const [postureReminder, setPostureReminder] = useState(false)
-  const [hydrationReminder, setHydrationReminder] = useState(false)
-  const [smartMode, setSmartMode] = useState(false)
-  const [focusMode, setFocusMode] = useState(false)
+  const [postureEnabled, setPostureEnabled] = useState(false)
+  const [postureInterval, setPostureInterval] = useState(30)
+  const [hydrationEnabled, setHydrationEnabled] = useState(false)
+  const [hydrationInterval, setHydrationInterval] = useState(60)
 
-  // Load auto-launch status on mount
   useEffect(() => {
-    window.electronAPI.getAutoLaunchStatus().then((enabled) => {
-      setAutoLaunch(enabled)
+    window.electronAPI.getAutoLaunchStatus().then((enabled) => setAutoLaunch(enabled))
+    window.electronAPI.getSettings().then((settings) => {
+      setPostureEnabled(settings.postureReminder.enabled)
+      setPostureInterval(settings.postureReminder.interval)
+      setHydrationEnabled(settings.hydrationReminder.enabled)
+      setHydrationInterval(settings.hydrationReminder.interval)
     })
   }, [])
 
-  // Handle auto-launch toggle
   const handleAutoLaunchToggle = async () => {
     const newValue = !autoLaunch
-    
-    if (newValue) {
-      const result = await window.electronAPI.enableAutoLaunch()
-      if (result.success) {
-        setAutoLaunch(true)
-      }
-    } else {
-      const result = await window.electronAPI.disableAutoLaunch()
-      if (result.success) {
-        setAutoLaunch(false)
-      }
-    }
+    const result = newValue
+      ? await window.electronAPI.enableAutoLaunch()
+      : await window.electronAPI.disableAutoLaunch()
+    if (result.success) setAutoLaunch(newValue)
+  }
+
+  const handlePostureToggle = () => {
+    const newValue = !postureEnabled
+    setPostureEnabled(newValue)
+    window.electronAPI.setReminderConfig('posture', newValue, postureInterval)
+  }
+
+  const handleHydrationToggle = () => {
+    const newValue = !hydrationEnabled
+    setHydrationEnabled(newValue)
+    window.electronAPI.setReminderConfig('hydration', newValue, hydrationInterval)
+  }
+
+  const handlePostureInterval = (value: number) => {
+    setPostureInterval(value)
+    window.electronAPI.setReminderConfig('posture', postureEnabled, value)
+  }
+
+  const handleHydrationInterval = (value: number) => {
+    setHydrationInterval(value)
+    window.electronAPI.setReminderConfig('hydration', hydrationEnabled, value)
   }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
-    <button 
+    <button
       onClick={onChange}
-      className={`w-12 h-6 rounded-full relative transition-colors ${
-        enabled ? 'bg-primary' : 'bg-muted'
-      }`}
+      className={`w-12 h-6 rounded-full relative transition-colors ${enabled ? 'bg-primary' : 'bg-muted'}`}
     >
-      <div 
-        className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
-          enabled ? 'right-0.5' : 'left-0.5'
-        }`}
-      ></div>
+      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${enabled ? 'right-0.5' : 'left-0.5'}`} />
     </button>
   )
 
@@ -73,14 +83,7 @@ export default function Settings() {
               <div className="text-foreground font-medium">Minimize to system tray</div>
               <div className="text-sm text-muted-foreground">Keep running in background</div>
             </div>
-            <Toggle enabled={minimizeToTray} onChange={() => setMinimizeToTray(!minimizeToTray)} />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-foreground font-medium">Sound notifications</div>
-              <div className="text-sm text-muted-foreground">Play sound when break starts</div>
-            </div>
-            <Toggle enabled={soundNotifications} onChange={() => setSoundNotifications(!soundNotifications)} />
+            <Toggle enabled={minimizeToTray} onChange={() => {}} />
           </div>
         </div>
       </div>
@@ -122,21 +125,53 @@ export default function Settings() {
       {/* Health Features */}
       <div className="bg-card p-6 rounded-lg border border-border">
         <h3 className="text-xl font-semibold text-foreground mb-4">Health Features</h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-foreground font-medium">Posture Reminder</div>
-              <div className="text-sm text-muted-foreground">Remind to sit up straight every 30 min</div>
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-foreground font-medium">Posture Reminder</div>
+                <div className="text-sm text-muted-foreground">Remind to sit up straight</div>
+              </div>
+              <Toggle enabled={postureEnabled} onChange={handlePostureToggle} />
             </div>
-            <Toggle enabled={postureReminder} onChange={() => setPostureReminder(!postureReminder)} />
+            {postureEnabled && (
+              <div className="pl-0 pt-1">
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm text-muted-foreground">Interval</span>
+                  <span className="text-sm text-primary font-medium">{postureInterval} min</span>
+                </div>
+                <input
+                  type="range" min="10" max="120" step="5"
+                  value={postureInterval}
+                  onChange={(e) => handlePostureInterval(Number(e.target.value))}
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-foreground font-medium">Hydration Reminder</div>
-              <div className="text-sm text-muted-foreground">Remind to drink water every 60 min</div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-foreground font-medium">Hydration Reminder</div>
+                <div className="text-sm text-muted-foreground">Remind to drink water</div>
+              </div>
+              <Toggle enabled={hydrationEnabled} onChange={handleHydrationToggle} />
             </div>
-            <Toggle enabled={hydrationReminder} onChange={() => setHydrationReminder(!hydrationReminder)} />
+            {hydrationEnabled && (
+              <div className="pl-0 pt-1">
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm text-muted-foreground">Interval</span>
+                  <span className="text-sm text-primary font-medium">{hydrationInterval} min</span>
+                </div>
+                <input
+                  type="range" min="15" max="180" step="15"
+                  value={hydrationInterval}
+                  onChange={(e) => handleHydrationInterval(Number(e.target.value))}
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -150,14 +185,14 @@ export default function Settings() {
               <div className="text-foreground font-medium">Smart Mode Detection</div>
               <div className="text-sm text-muted-foreground">Auto-pause during meetings and presentations</div>
             </div>
-            <Toggle enabled={smartMode} onChange={() => setSmartMode(!smartMode)} />
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">Coming in v1.2.0</span>
           </div>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-foreground font-medium">Focus Mode</div>
               <div className="text-sm text-muted-foreground">Pomodoro timer with website blocking</div>
             </div>
-            <Toggle enabled={focusMode} onChange={() => setFocusMode(!focusMode)} />
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">Coming in v1.2.0</span>
           </div>
         </div>
       </div>
