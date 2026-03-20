@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import { BreakMode, TimerStatus } from '@shared/types'
 
+interface SmartModeStatus {
+  enabled: boolean
+  inMeeting: boolean
+  detectedBy: string | null
+  manualOverride: boolean
+}
+
 export default function Timer() {
   const [timerStatus, setTimerStatus] = useState<TimerStatus>({
     isRunning: false,
@@ -13,9 +20,11 @@ export default function Timer() {
   const [selectedMode, setSelectedMode] = useState<BreakMode>('hard')
   const [breakInterval, setBreakInterval] = useState(20)
   const [breakDuration, setBreakDuration] = useState(20)
+  const [smartStatus, setSmartStatus] = useState<SmartModeStatus>({
+    enabled: false, inMeeting: false, detectedBy: null, manualOverride: false
+  })
 
   useEffect(() => {
-    // Load initial timer status
     window.electronAPI.getTimerStatus().then((status) => {
       setTimerStatus(status)
       setSelectedMode(status.mode)
@@ -23,10 +32,12 @@ export default function Timer() {
       setBreakDuration(status.duration)
     })
 
-    // Listen for timer updates
     window.electronAPI.onTimerStatus((status) => {
       setTimerStatus(status)
     })
+
+    window.electronAPI.getSmartModeStatus().then(setSmartStatus)
+    window.electronAPI.onSmartModeStatus(setSmartStatus)
   }, [])
 
   // Auto-restart timer when settings change (only if timer is already running)
@@ -54,6 +65,15 @@ export default function Timer() {
     { name: 'Pomodoro', interval: 25, duration: 300 },
     { name: 'Frequent', interval: 15, duration: 15 }
   ]
+
+  const handleModeSelect = (mode: BreakMode) => {
+    setSelectedMode(mode)
+    if (mode === 'smart') {
+      window.electronAPI.setSmartMode(true)
+    } else if (selectedMode === 'smart') {
+      window.electronAPI.setSmartMode(false)
+    }
+  }
 
   const applyPreset = (preset: typeof presets[0]) => {
     setBreakInterval(preset.interval)
@@ -106,7 +126,7 @@ export default function Timer() {
           {modes.map((mode) => (
             <button
               key={mode.id}
-              onClick={() => setSelectedMode(mode.id)}
+              onClick={() => handleModeSelect(mode.id)}
               className={`p-4 border-2 rounded-lg text-left transition-all ${
                 selectedMode === mode.id
                   ? 'border-primary bg-primary/10'
@@ -146,6 +166,29 @@ export default function Timer() {
             </div>
           )}
         </div>
+
+        {/* Smart Mode Status */}
+        {selectedMode === 'smart' && (
+          <div className={`mt-4 p-3 rounded-lg border ${
+            smartStatus.inMeeting
+              ? 'bg-amber-500/10 border-amber-500/30'
+              : 'bg-primary/10 border-primary/30'
+          }`}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-foreground">
+                {smartStatus.inMeeting
+                  ? `Meeting detected${smartStatus.detectedBy ? ` via ${smartStatus.detectedBy}` : ''} - breaks paused`
+                  : 'Monitoring for meetings...'}
+              </p>
+              <button
+                onClick={() => window.electronAPI.setManualMeeting(!smartStatus.inMeeting)}
+                className="text-xs px-3 py-1 bg-muted rounded-md hover:bg-muted/80 transition-colors ml-3 shrink-0"
+              >
+                {smartStatus.inMeeting ? 'End Meeting' : 'I\'m in a Meeting'}
+              </button>
+            </div>
+          </div>
+        )}
         
         {timerStatus.isPaused ? (
           <div className="mt-4 p-3 bg-destructive/10 rounded-lg border border-destructive/30">

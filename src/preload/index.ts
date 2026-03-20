@@ -62,7 +62,15 @@ const electronAPI: ElectronAPI = {
   setReminderConfig: (type, enabled, intervalMinutes) =>
     ipcRenderer.send('set-reminder-config', { type, enabled, intervalMinutes }),
   snoozeReminder: (type, minutes) =>
-    ipcRenderer.send('snooze-reminder', { type, minutes })
+    ipcRenderer.send('snooze-reminder', { type, minutes }),
+
+  // Smart Mode
+  setSmartMode: (enabled) => ipcRenderer.send('set-smart-mode', enabled),
+  setManualMeeting: (inMeeting) => ipcRenderer.send('set-manual-meeting', inMeeting),
+  getSmartModeStatus: () => ipcRenderer.invoke('get-smart-mode-status'),
+  onSmartModeStatus: (callback) => {
+    ipcRenderer.on('smart-mode-status', (_, status) => callback(status))
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
