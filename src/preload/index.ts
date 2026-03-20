@@ -61,9 +61,8 @@ const electronAPI: ElectronAPI = {
   // Reminders
   setReminderConfig: (type, enabled, intervalMinutes) =>
     ipcRenderer.send('set-reminder-config', { type, enabled, intervalMinutes }),
-  onReminderTriggered: (callback) => {
-    ipcRenderer.on('reminder-triggered', (_, data) => callback(data))
-  }
+  snoozeReminder: (type, minutes) =>
+    ipcRenderer.send('snooze-reminder', { type, minutes })
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

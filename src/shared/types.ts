@@ -146,7 +146,7 @@ export interface ElectronAPI {
 
   // Reminders
   setReminderConfig: (type: 'posture' | 'hydration', enabled: boolean, intervalMinutes: number) => void
-  onReminderTriggered: (callback: (data: { type: string; title: string; body: string }) => void) => void
+  snoozeReminder: (type: 'posture' | 'hydration', minutes: number) => void
 }
 
 export interface TimerStatus {
