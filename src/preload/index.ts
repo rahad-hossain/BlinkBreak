@@ -56,7 +56,14 @@ const electronAPI: ElectronAPI = {
   // Monitor Controls
   setMonitorBrightness: (value) => ipcRenderer.invoke('set-monitor-brightness', value),
   setMonitorContrast: (value) => ipcRenderer.invoke('set-monitor-contrast', value),
-  getMonitorBrightness: () => ipcRenderer.invoke('get-monitor-brightness')
+  getMonitorBrightness: () => ipcRenderer.invoke('get-monitor-brightness'),
+
+  // Reminders
+  setReminderConfig: (type, enabled, intervalMinutes) =>
+    ipcRenderer.send('set-reminder-config', { type, enabled, intervalMinutes }),
+  onReminderTriggered: (callback) => {
+    ipcRenderer.on('reminder-triggered', (_, data) => callback(data))
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

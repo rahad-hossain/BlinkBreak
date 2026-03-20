@@ -8,6 +8,7 @@ import { StatisticsManager } from './statistics'
 import { BlueLightFilterManager } from './blueLightFilter'
 import { ColorMaskManager } from './colorMask'
 import { MonitorControlManager } from './monitorControl'
+import { ReminderManager } from './reminders'
 
 let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
@@ -17,6 +18,7 @@ let statisticsManager: StatisticsManager
 let blueLightFilterManager: BlueLightFilterManager
 let colorMaskManager: ColorMaskManager
 let monitorControlManager: MonitorControlManager
+let reminderManager: ReminderManager
 let isQuitting = false
 let screenTimeTracker: NodeJS.Timeout | null = null
 
@@ -107,6 +109,7 @@ app.whenReady().then(() => {
       (duration) => statisticsManager.recordBreakSkipped(duration)
     )
     trayManager = new TrayManager(mainWindow)
+    reminderManager = new ReminderManager(mainWindow)
     
     // Create system tray
     trayManager.createTray()
@@ -143,6 +146,16 @@ app.whenReady().then(() => {
       
       setTimeout(() => {
         timerManager.start(settings.interval, settings.duration, settings.mode)
+
+        // Apply saved reminder settings
+        reminderManager.configure('posture', {
+          enabled: settings.postureReminder.enabled,
+          intervalMinutes: settings.postureReminder.interval
+        })
+        reminderManager.configure('hydration', {
+          enabled: settings.hydrationReminder.enabled,
+          intervalMinutes: settings.hydrationReminder.interval
+        })
       }, 2000) // Wait 2 seconds after loading screen
     })
   }
@@ -174,6 +187,8 @@ app.on('before-quit', async () => {
   await blueLightFilterManager.destroy()
   // Clean up color mask
   await colorMaskManager.destroy()
+  // Clean up reminders
+  reminderManager.destroy()
 })
 
 // Screen time tracking
@@ -363,4 +378,18 @@ ipcMain.handle('set-monitor-contrast', async (_, value: number) => {
 
 ipcMain.handle('get-monitor-brightness', async () => {
   return await monitorControlManager.getBrightness()
+})
+
+// IPC Handlers - Reminders
+ipcMain.on('set-reminder-config', (_, { type, enabled, intervalMinutes }) => {
+  reminderManager.configure(type, { enabled, intervalMinutes })
+  const settings = settingsManager.getSettings()
+  if (type === 'posture') {
+    settings.postureReminder.enabled = enabled
+    settings.postureReminder.interval = intervalMinutes
+  } else if (type === 'hydration') {
+    settings.hydrationReminder.enabled = enabled
+    settings.hydrationReminder.interval = intervalMinutes
+  }
+  settingsManager.saveSettings(settings)
 })
