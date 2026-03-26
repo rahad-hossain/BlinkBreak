@@ -9,6 +9,7 @@ import { BlueLightFilterManager } from './blueLightFilter'
 import { ColorMaskManager } from './colorMask'
 import { MonitorControlManager } from './monitorControl'
 import { ReminderManager } from './reminders'
+import { SmartModeManager } from './smartMode'
 
 let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
@@ -19,6 +20,7 @@ let blueLightFilterManager: BlueLightFilterManager
 let colorMaskManager: ColorMaskManager
 let monitorControlManager: MonitorControlManager
 let reminderManager: ReminderManager
+let smartModeManager: SmartModeManager
 let isQuitting = false
 let screenTimeTracker: NodeJS.Timeout | null = null
 
@@ -110,6 +112,11 @@ app.whenReady().then(() => {
     )
     trayManager = new TrayManager(mainWindow)
     reminderManager = new ReminderManager()
+    smartModeManager = new SmartModeManager(
+      mainWindow,
+      () => timerManager.pauseForMeeting(),
+      () => timerManager.resumeFromMeeting()
+    )
     
     // Create system tray
     trayManager.createTray()
@@ -146,6 +153,13 @@ app.whenReady().then(() => {
       
       setTimeout(() => {
         timerManager.start(settings.interval, settings.duration, settings.mode)
+
+        if (settings.mode === 'smart') {
+          smartModeManager.enable()
+        }
+
+        // Apply whitelist
+        smartModeManager.setWhitelist(settings.smartModeWhitelist ?? [])
 
         // Apply saved reminder settings
         reminderManager.configure('posture', {
@@ -189,6 +203,8 @@ app.on('before-quit', async () => {
   await colorMaskManager.destroy()
   // Clean up reminders
   reminderManager.destroy()
+  // Clean up smart mode
+  smartModeManager.destroy()
 })
 
 // Screen time tracking
@@ -396,4 +412,35 @@ ipcMain.on('set-reminder-config', (_, { type, enabled, intervalMinutes }) => {
 
 ipcMain.on('snooze-reminder', (_, { type, minutes }) => {
   reminderManager.snooze(type, minutes)
+})
+
+// IPC Handlers - Smart Mode
+ipcMain.on('set-smart-mode', (_, enabled: boolean) => {
+  if (enabled) {
+    smartModeManager.enable()
+  } else {
+    smartModeManager.disable()
+  }
+  const settings = settingsManager.getSettings()
+  settings.mode = enabled ? 'smart' : 'hard'
+  settingsManager.saveSettings(settings)
+})
+
+ipcMain.on('set-manual-meeting', (_, inMeeting: boolean) => {
+  smartModeManager.setManualMeeting(inMeeting)
+})
+
+ipcMain.handle('get-smart-mode-status', () => {
+  return smartModeManager.getStatus()
+})
+
+ipcMain.on('set-smart-mode-whitelist', (_, list: string[]) => {
+  smartModeManager.setWhitelist(list)
+  const settings = settingsManager.getSettings()
+  settings.smartModeWhitelist = list
+  settingsManager.saveSettings(settings)
+})
+
+ipcMain.handle('get-smart-mode-whitelist', () => {
+  return smartModeManager.getWhitelist()
 })
