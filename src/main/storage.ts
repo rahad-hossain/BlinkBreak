@@ -31,6 +31,7 @@ const defaultSettings: Settings = {
   },
   focusMode: {
     enabled: false,
+    blockedDomains: ['reddit.com', 'twitter.com', 'x.com', 'youtube.com', 'facebook.com', 'instagram.com'],
     pomodoroLength: 25,
     shortBreak: 5,
     longBreak: 15
