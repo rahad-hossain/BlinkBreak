@@ -18,11 +18,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@paymoapp/active-window": "^2.1.4",
     "auto-launch": "^5.0.6",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "electron-store": "^8.1.0",
     "lucide-react": "^0.344.0",
+    "ps-list": "^7.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.12.0",

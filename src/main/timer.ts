@@ -8,6 +8,7 @@ export class TimerManager {
   private mode: BreakMode = 'hard'
   private isRunning: boolean = false
   private isPaused: boolean = false
+  private isPausedByMeeting: boolean = false
   private timerId: NodeJS.Timeout | null = null
   private remainingTime: number = 0 // seconds
   private startTime: number = 0
@@ -50,6 +51,20 @@ export class TimerManager {
     this.remainingTime = 0
     this.breakWindowManager.closeAllWindows()
     this.sendStatus()
+  }
+
+  /** Called by SmartMode when a meeting starts - does not conflict with user pause */
+  pauseForMeeting(): void {
+    if (!this.isRunning || this.isPaused) return
+    this.isPausedByMeeting = true
+    this.pause()
+  }
+
+  /** Called by SmartMode when a meeting ends - only resumes if paused by meeting */
+  resumeFromMeeting(): void {
+    if (!this.isPausedByMeeting) return
+    this.isPausedByMeeting = false
+    this.resume()
   }
 
   pause() {
