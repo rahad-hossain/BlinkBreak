@@ -10,6 +10,7 @@ import { ColorMaskManager } from './colorMask'
 import { MonitorControlManager } from './monitorControl'
 import { ReminderManager } from './reminders'
 import { SmartModeManager } from './smartMode'
+import { WebsiteBlockerManager } from './websiteBlocker'
 
 let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
@@ -21,6 +22,7 @@ let colorMaskManager: ColorMaskManager
 let monitorControlManager: MonitorControlManager
 let reminderManager: ReminderManager
 let smartModeManager: SmartModeManager
+let websiteBlockerManager: WebsiteBlockerManager
 let isQuitting = false
 let screenTimeTracker: NodeJS.Timeout | null = null
 
@@ -117,6 +119,7 @@ app.whenReady().then(() => {
       () => timerManager.pauseForMeeting(),
       () => timerManager.resumeFromMeeting()
     )
+    websiteBlockerManager = new WebsiteBlockerManager()
     
     // Create system tray
     trayManager.createTray()
@@ -160,6 +163,11 @@ app.whenReady().then(() => {
 
         // Apply whitelist
         smartModeManager.setWhitelist(settings.smartModeWhitelist ?? [])
+
+        // Restore focus mode if it was enabled
+        if (settings.focusMode.enabled) {
+          websiteBlockerManager.enable(settings.focusMode.blockedDomains ?? [])
+        }
 
         // Apply saved reminder settings
         reminderManager.configure('posture', {
@@ -205,6 +213,8 @@ app.on('before-quit', async () => {
   reminderManager.destroy()
   // Clean up smart mode
   smartModeManager.destroy()
+  // Clean up website blocker
+  await websiteBlockerManager.destroy()
 })
 
 // Screen time tracking
@@ -443,4 +453,33 @@ ipcMain.on('set-smart-mode-whitelist', (_, list: string[]) => {
 
 ipcMain.handle('get-smart-mode-whitelist', () => {
   return smartModeManager.getWhitelist()
+})
+
+// IPC Handlers - Focus Mode / Website Blocker
+ipcMain.handle('set-focus-mode', async (_, enabled: boolean) => {
+  const settings = settingsManager.getSettings()
+  settings.focusMode.enabled = enabled
+  settingsManager.saveSettings(settings)
+
+  if (enabled) {
+    return websiteBlockerManager.enable(settings.focusMode.blockedDomains ?? [])
+  } else {
+    return websiteBlockerManager.disable()
+  }
+})
+
+ipcMain.handle('set-blocked-domains', async (_, domains: string[]) => {
+  const settings = settingsManager.getSettings()
+  settings.focusMode.blockedDomains = domains
+  settingsManager.saveSettings(settings)
+  return websiteBlockerManager.setDomains(domains)
+})
+
+ipcMain.handle('get-blocked-domains', () => {
+  const settings = settingsManager.getSettings()
+  return settings.focusMode.blockedDomains ?? []
+})
+
+ipcMain.handle('get-focus-mode-status', () => {
+  return websiteBlockerManager.isEnabled()
 })

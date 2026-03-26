@@ -31,6 +31,7 @@ export interface Settings {
   }
   focusMode: {
     enabled: boolean
+    blockedDomains: string[]
     pomodoroLength: number
     shortBreak: number
     longBreak: number
@@ -156,6 +157,12 @@ export interface ElectronAPI {
   onSmartModeStatus: (callback: (status: { enabled: boolean; inMeeting: boolean; detectedBy: string | null; manualOverride: boolean }) => void) => void
   setSmartModeWhitelist: (list: string[]) => void
   getSmartModeWhitelist: () => Promise<string[]>
+
+  // Focus Mode / Website Blocker
+  setFocusMode: (enabled: boolean) => Promise<{ success: boolean; error?: string }>
+  setBlockedDomains: (domains: string[]) => Promise<{ success: boolean; error?: string }>
+  getBlockedDomains: () => Promise<string[]>
+  getFocusModeStatus: () => Promise<boolean>
 }
 
 export interface TimerStatus {
