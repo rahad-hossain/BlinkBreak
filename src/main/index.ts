@@ -158,6 +158,9 @@ app.whenReady().then(() => {
           smartModeManager.enable()
         }
 
+        // Apply whitelist
+        smartModeManager.setWhitelist(settings.smartModeWhitelist ?? [])
+
         // Apply saved reminder settings
         reminderManager.configure('posture', {
           enabled: settings.postureReminder.enabled,
@@ -429,4 +432,15 @@ ipcMain.on('set-manual-meeting', (_, inMeeting: boolean) => {
 
 ipcMain.handle('get-smart-mode-status', () => {
   return smartModeManager.getStatus()
+})
+
+ipcMain.on('set-smart-mode-whitelist', (_, list: string[]) => {
+  smartModeManager.setWhitelist(list)
+  const settings = settingsManager.getSettings()
+  settings.smartModeWhitelist = list
+  settingsManager.saveSettings(settings)
+})
+
+ipcMain.handle('get-smart-mode-whitelist', () => {
+  return smartModeManager.getWhitelist()
 })

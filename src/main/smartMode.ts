@@ -73,6 +73,7 @@ export class SmartModeManager {
   private inMeeting = false
   private manualOverride = false
   private detectedBy: string | null = null
+  private whitelist: string[] = []
 
   private consecutiveMeetingCount = 0
   private consecutiveIdleCount = 0
@@ -117,6 +118,20 @@ export class SmartModeManager {
   registerDetector(detector: MeetingDetector): void {
     this.detectors.push(detector)
     console.log(`[SmartMode] Registered detector: ${detector.name}`)
+  }
+
+  /*
+   * Updates the process whitelist.
+   * Any whitelisted process running in the foreground pauses breaks,
+   * independent of meeting detection (e.g. Figma, OBS).
+   */
+  setWhitelist(list: string[]): void {
+    this.whitelist = list.map(p => p.toLowerCase())
+    console.log(`[SmartMode] Whitelist updated: ${this.whitelist.join(', ')}`)
+  }
+
+  getWhitelist(): string[] {
+    return this.whitelist
   }
 
   enable(): void {
@@ -203,17 +218,20 @@ export class SmartModeManager {
       ])
 
       const detected = this.runDetectors(windowTitle, processes)
+      const whitelisted = this.checkWhitelist(processes)
+      const shouldPause = detected.inMeeting || whitelisted.matched
+      const detectorName = detected.inMeeting ? detected.detectorName : (whitelisted.processName ?? '')
 
-      if (detected.inMeeting) {
+      if (shouldPause) {
         this.consecutiveIdleCount = 0
         this.consecutiveMeetingCount++
 
         if (this.consecutiveMeetingCount >= this.DEBOUNCE_COUNT && !this.inMeeting) {
           this.inMeeting = true
-          this.detectedBy = detected.detectorName
+          this.detectedBy = detectorName
           this.onMeetingStart()
           this.sendStatus()
-          console.log(`[SmartMode] Meeting detected by: ${detected.detectorName}`)
+          console.log(`[SmartMode] Meeting detected by: ${detectorName}`)
         }
       } else {
         this.consecutiveMeetingCount = 0
@@ -243,6 +261,19 @@ export class SmartModeManager {
       }
     }
     return { inMeeting: false, detectorName: '' }
+  }
+
+  /*
+   * Checks if any whitelisted process is currently running.
+   * Returns the matched process name for status reporting.
+   */
+  private checkWhitelist(processes: string[]): { matched: boolean; processName: string | null } {
+    for (const entry of this.whitelist) {
+      if (processes.includes(entry)) {
+        return { matched: true, processName: entry }
+      }
+    }
+    return { matched: false, processName: null }
   }
 
   /* Returns the focused window title, or null if unavailable. */

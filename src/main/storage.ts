@@ -34,7 +34,8 @@ const defaultSettings: Settings = {
     pomodoroLength: 25,
     shortBreak: 5,
     longBreak: 15
-  }
+  },
+  smartModeWhitelist: ['figma', 'figma.exe', 'obs', 'obs64.exe', 'obs32.exe']
 }
 
 export class SettingsManager {

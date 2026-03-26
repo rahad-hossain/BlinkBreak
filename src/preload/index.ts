@@ -70,7 +70,9 @@ const electronAPI: ElectronAPI = {
   getSmartModeStatus: () => ipcRenderer.invoke('get-smart-mode-status'),
   onSmartModeStatus: (callback) => {
     ipcRenderer.on('smart-mode-status', (_, status) => callback(status))
-  }
+  },
+  setSmartModeWhitelist: (list) => ipcRenderer.send('set-smart-mode-whitelist', list),
+  getSmartModeWhitelist: () => ipcRenderer.invoke('get-smart-mode-whitelist')
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

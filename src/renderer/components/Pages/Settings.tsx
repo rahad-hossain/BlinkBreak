@@ -5,11 +5,12 @@ export default function Settings() {
   const { theme, setTheme } = useStore()
   const [autoLaunch, setAutoLaunch] = useState(true)
   const [minimizeToTray] = useState(true)
-  const [soundNotifications, setSoundNotifications] = useState(false)
   const [postureEnabled, setPostureEnabled] = useState(false)
   const [postureInterval, setPostureInterval] = useState(30)
   const [hydrationEnabled, setHydrationEnabled] = useState(false)
   const [hydrationInterval, setHydrationInterval] = useState(60)
+  const [whitelist, setWhitelist] = useState<string[]>([])
+  const [whitelistInput, setWhitelistInput] = useState('')
 
   useEffect(() => {
     window.electronAPI.getAutoLaunchStatus().then((enabled) => setAutoLaunch(enabled))
@@ -19,6 +20,7 @@ export default function Settings() {
       setHydrationEnabled(settings.hydrationReminder.enabled)
       setHydrationInterval(settings.hydrationReminder.interval)
     })
+    window.electronAPI.getSmartModeWhitelist().then(setWhitelist)
   }, [])
 
   const handleAutoLaunchToggle = async () => {
@@ -49,6 +51,21 @@ export default function Settings() {
   const handleHydrationInterval = (value: number) => {
     setHydrationInterval(value)
     window.electronAPI.setReminderConfig('hydration', hydrationEnabled, value)
+  }
+
+  const addToWhitelist = () => {
+    const entry = whitelistInput.trim().toLowerCase()
+    if (!entry || whitelist.includes(entry)) return
+    const updated = [...whitelist, entry]
+    setWhitelist(updated)
+    setWhitelistInput('')
+    window.electronAPI.setSmartModeWhitelist(updated)
+  }
+
+  const removeFromWhitelist = (entry: string) => {
+    const updated = whitelist.filter(p => p !== entry)
+    setWhitelist(updated)
+    window.electronAPI.setSmartModeWhitelist(updated)
   }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
@@ -174,6 +191,50 @@ export default function Settings() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Smart Mode Whitelist */}
+      <div className="bg-card p-6 rounded-lg border border-border">
+        <h3 className="text-xl font-semibold text-foreground mb-1">Smart Mode Whitelist</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Breaks pause automatically when any of these processes are running (e.g. figma.exe, obs64.exe).
+        </p>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={whitelistInput}
+            onChange={(e) => setWhitelistInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addToWhitelist()}
+            placeholder="e.g. figma.exe"
+            className="flex-1 px-3 py-2 bg-muted rounded-lg text-foreground text-sm outline-none focus:ring-1 focus:ring-primary"
+          />
+          <button
+            onClick={addToWhitelist}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Add
+          </button>
+        </div>
+        {whitelist.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No processes added yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {whitelist.map((entry) => (
+              <span
+                key={entry}
+                className="flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full text-sm text-foreground"
+              >
+                {entry}
+                <button
+                  onClick={() => removeFromWhitelist(entry)}
+                  className="text-muted-foreground hover:text-destructive transition-colors leading-none"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Advanced Settings */}

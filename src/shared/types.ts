@@ -35,6 +35,7 @@ export interface Settings {
     shortBreak: number
     longBreak: number
   }
+  smartModeWhitelist: string[]
 }
 
 export interface Statistics {
@@ -153,6 +154,8 @@ export interface ElectronAPI {
   setManualMeeting: (inMeeting: boolean) => void
   getSmartModeStatus: () => Promise<{ enabled: boolean; inMeeting: boolean; detectedBy: string | null; manualOverride: boolean }>
   onSmartModeStatus: (callback: (status: { enabled: boolean; inMeeting: boolean; detectedBy: string | null; manualOverride: boolean }) => void) => void
+  setSmartModeWhitelist: (list: string[]) => void
+  getSmartModeWhitelist: () => Promise<string[]>
 }
 
 export interface TimerStatus {
