@@ -483,3 +483,7 @@ ipcMain.handle('get-blocked-domains', () => {
 ipcMain.handle('get-focus-mode-status', () => {
   return websiteBlockerManager.isEnabled()
 })
+
+ipcMain.handle('get-hosts-write-access', () => {
+  return websiteBlockerManager.hasWriteAccess()
+})

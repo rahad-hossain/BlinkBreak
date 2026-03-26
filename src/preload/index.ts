@@ -78,7 +78,8 @@ const electronAPI: ElectronAPI = {
   setFocusMode: (enabled) => ipcRenderer.invoke('set-focus-mode', enabled),
   setBlockedDomains: (domains) => ipcRenderer.invoke('set-blocked-domains', domains),
   getBlockedDomains: () => ipcRenderer.invoke('get-blocked-domains'),
-  getFocusModeStatus: () => ipcRenderer.invoke('get-focus-mode-status')
+  getFocusModeStatus: () => ipcRenderer.invoke('get-focus-mode-status'),
+  getHostsWriteAccess: () => ipcRenderer.invoke('get-hosts-write-access')
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

@@ -15,6 +15,8 @@ export default function Settings() {
   const [blockedDomains, setBlockedDomains] = useState<string[]>([])
   const [domainInput, setDomainInput] = useState('')
   const [focusLoading, setFocusLoading] = useState(false)
+  const [focusError, setFocusError] = useState<string | null>(null)
+  const [showElevationNotice, setShowElevationNotice] = useState(false)
 
   useEffect(() => {
     window.electronAPI.getAutoLaunchStatus().then((enabled) => setAutoLaunch(enabled))
@@ -75,11 +77,29 @@ export default function Settings() {
   }
 
   const handleFocusToggle = async () => {
-    setFocusLoading(true)
+    setFocusError(null)
     const newValue = !focusEnabled
+
+    if (newValue) {
+      /* Check if we need elevation before proceeding. */
+      const hasAccess = await window.electronAPI.getHostsWriteAccess()
+      if (!hasAccess) {
+        setShowElevationNotice(true)
+        return
+      }
+    }
+
+    await applyFocusMode(newValue)
+  }
+
+  const applyFocusMode = async (newValue: boolean) => {
+    setFocusLoading(true)
+    setShowElevationNotice(false)
     const result = await window.electronAPI.setFocusMode(newValue)
     if (result.success) {
       setFocusEnabled(newValue)
+    } else {
+      setFocusError(result.error ?? 'Failed to update hosts file.')
     }
     setFocusLoading(false)
   }
@@ -280,8 +300,37 @@ export default function Settings() {
             : 'Enable to block distracting websites system-wide while you work.'}
         </p>
 
+        {/* One-time elevation notice */}
+        {showElevationNotice && (
+          <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div className="text-foreground font-medium mb-1">Administrator access required</div>
+            <div className="text-sm text-muted-foreground mb-3">
+              Focus Mode edits the system hosts file to block websites in all browsers.
+              You will see a one-time permission prompt from Windows. This only happens once per session.
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => applyFocusMode(true)}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                Continue
+              </button>
+              <button
+                onClick={() => setShowElevationNotice(false)}
+                className="px-4 py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {focusLoading && (
           <p className="text-sm text-primary mb-3">Applying changes...</p>
+        )}
+
+        {focusError && (
+          <p className="text-sm text-destructive mb-3">{focusError}</p>
         )}
 
         <div className="flex gap-2 mb-4">
@@ -323,7 +372,7 @@ export default function Settings() {
         )}
 
         <p className="text-xs text-muted-foreground mt-4">
-          Requires administrator privileges. Changes take effect immediately in all browsers.
+          A one-time permission prompt appears when enabling. Changes take effect immediately in all browsers.
         </p>
       </div>
 
