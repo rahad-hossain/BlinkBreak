@@ -72,7 +72,13 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('smart-mode-status', (_, status) => callback(status))
   },
   setSmartModeWhitelist: (list) => ipcRenderer.send('set-smart-mode-whitelist', list),
-  getSmartModeWhitelist: () => ipcRenderer.invoke('get-smart-mode-whitelist')
+  getSmartModeWhitelist: () => ipcRenderer.invoke('get-smart-mode-whitelist'),
+
+  // Focus Mode / Website Blocker
+  setFocusMode: (enabled) => ipcRenderer.invoke('set-focus-mode', enabled),
+  setBlockedDomains: (domains) => ipcRenderer.invoke('set-blocked-domains', domains),
+  getBlockedDomains: () => ipcRenderer.invoke('get-blocked-domains'),
+  getFocusModeStatus: () => ipcRenderer.invoke('get-focus-mode-status')
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

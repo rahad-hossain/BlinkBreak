@@ -11,6 +11,10 @@ export default function Settings() {
   const [hydrationInterval, setHydrationInterval] = useState(60)
   const [whitelist, setWhitelist] = useState<string[]>([])
   const [whitelistInput, setWhitelistInput] = useState('')
+  const [focusEnabled, setFocusEnabled] = useState(false)
+  const [blockedDomains, setBlockedDomains] = useState<string[]>([])
+  const [domainInput, setDomainInput] = useState('')
+  const [focusLoading, setFocusLoading] = useState(false)
 
   useEffect(() => {
     window.electronAPI.getAutoLaunchStatus().then((enabled) => setAutoLaunch(enabled))
@@ -21,6 +25,8 @@ export default function Settings() {
       setHydrationInterval(settings.hydrationReminder.interval)
     })
     window.electronAPI.getSmartModeWhitelist().then(setWhitelist)
+    window.electronAPI.getBlockedDomains().then(setBlockedDomains)
+    window.electronAPI.getFocusModeStatus().then(setFocusEnabled)
   }, [])
 
   const handleAutoLaunchToggle = async () => {
@@ -66,6 +72,31 @@ export default function Settings() {
     const updated = whitelist.filter(p => p !== entry)
     setWhitelist(updated)
     window.electronAPI.setSmartModeWhitelist(updated)
+  }
+
+  const handleFocusToggle = async () => {
+    setFocusLoading(true)
+    const newValue = !focusEnabled
+    const result = await window.electronAPI.setFocusMode(newValue)
+    if (result.success) {
+      setFocusEnabled(newValue)
+    }
+    setFocusLoading(false)
+  }
+
+  const addDomain = async () => {
+    const entry = domainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+    if (!entry || blockedDomains.includes(entry)) return
+    const updated = [...blockedDomains, entry]
+    setBlockedDomains(updated)
+    setDomainInput('')
+    await window.electronAPI.setBlockedDomains(updated)
+  }
+
+  const removeDomain = async (domain: string) => {
+    const updated = blockedDomains.filter(d => d !== domain)
+    setBlockedDomains(updated)
+    await window.electronAPI.setBlockedDomains(updated)
   }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
@@ -237,6 +268,65 @@ export default function Settings() {
         )}
       </div>
 
+      {/* Focus Mode */}
+      <div className="bg-card p-6 rounded-lg border border-border">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-xl font-semibold text-foreground">Focus Mode</h3>
+          <Toggle enabled={focusEnabled} onChange={handleFocusToggle} />
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          {focusEnabled
+            ? 'Blocking active — listed websites are inaccessible in all browsers.'
+            : 'Enable to block distracting websites system-wide while you work.'}
+        </p>
+
+        {focusLoading && (
+          <p className="text-sm text-primary mb-3">Applying changes...</p>
+        )}
+
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={domainInput}
+            onChange={(e) => setDomainInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addDomain()}
+            placeholder="e.g. reddit.com"
+            className="flex-1 px-3 py-2 bg-muted rounded-lg text-foreground text-sm outline-none focus:ring-1 focus:ring-primary"
+          />
+          <button
+            onClick={addDomain}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Add
+          </button>
+        </div>
+
+        {blockedDomains.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No domains added yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {blockedDomains.map((domain) => (
+              <span
+                key={domain}
+                className="flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full text-sm text-foreground"
+              >
+                {domain}
+                <button
+                  onClick={() => removeDomain(domain)}
+                  className="text-muted-foreground hover:text-destructive transition-colors leading-none"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground mt-4">
+          Requires administrator privileges. Changes take effect immediately in all browsers.
+        </p>
+      </div>
+
       {/* Advanced Settings */}
       <div className="bg-card p-6 rounded-lg border border-border">
         <h3 className="text-xl font-semibold text-foreground mb-4">Advanced</h3>
@@ -246,14 +336,7 @@ export default function Settings() {
               <div className="text-foreground font-medium">Smart Mode Detection</div>
               <div className="text-sm text-muted-foreground">Auto-pause during meetings and presentations</div>
             </div>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">Coming in v1.2.0</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-foreground font-medium">Focus Mode</div>
-              <div className="text-sm text-muted-foreground">Pomodoro timer with website blocking</div>
-            </div>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">Coming in v1.2.0</span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">v1.2.0</span>
           </div>
         </div>
       </div>
