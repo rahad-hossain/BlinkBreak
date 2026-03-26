@@ -159,10 +159,11 @@ export interface ElectronAPI {
   getSmartModeWhitelist: () => Promise<string[]>
 
   // Focus Mode / Website Blocker
-  setFocusMode: (enabled: boolean) => Promise<{ success: boolean; error?: string }>
+  setFocusMode: (enabled: boolean) => Promise<{ success: boolean; error?: string; needsElevation?: boolean }>
   setBlockedDomains: (domains: string[]) => Promise<{ success: boolean; error?: string }>
   getBlockedDomains: () => Promise<string[]>
   getFocusModeStatus: () => Promise<boolean>
+  getHostsWriteAccess: () => Promise<boolean>
 }
 
 export interface TimerStatus {
