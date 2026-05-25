@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/rahad-hossain/BlinkBreak/releases/latest">
-    <img src="https://img.shields.io/badge/version-1.0.0-3daa8f" alt="Version 1.0.0">
+    <img src="https://img.shields.io/badge/version-1.1.0-3daa8f" alt="Version 1.1.0">
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-3daa8f" alt="Windows">
   <img src="https://img.shields.io/badge/license-MIT-3daa8f" alt="MIT License">
@@ -42,31 +42,36 @@ BlinkBreak is a cross-platform desktop application built with Electron that help
 - ✓ **Smart Break Timer** - Customizable intervals (5-60 min) and duration (5-60 sec)
 - ✓ **Hard Mode** - Full screen lock on all monitors
 - ✓ **Soft Mode** - Gentle popup notification
+- ✓ **Smart Mode** - Auto-detects meetings and pauses breaks during calls
 - ✓ **Multi-Monitor Support** - Covers all displays with different DPI
 - ✓ **System Tray** - Runs in background with live timer status
 - ✓ **Auto-Launch** - Start with Windows (toggle in Settings)
 - ✓ **Settings Persistence** - Timer settings survive restarts
+- ✓ **Statistics Tracking** - View daily screen time, streaks, and activity
+- ✓ **Health Reminders** - Posture and hydration reminders
+- ✓ **Monitor Controls** - Adjust brightness and contrast from the app
+- ✓ **Blue Light Filter** - Warm-screen overlay for reduced eye strain
+- ✓ **Color Mask** - Apply custom color overlays to reduce visual fatigue
+- ✓ **Focus Mode** - System-wide website blocker for fewer distractions
 - ✓ **Dual Themes** - Dark Neon (eye-friendly) and White
 - ✓ **Single Instance** - Prevents multiple app instances
 
 ### Coming Soon
-- ○ Statistics tracking (UI ready)
-- ○ Smart Mode (meeting detection)
-- ○ Health reminders (posture, hydration)
-- ○ Monitor controls (brightness, contrast)
-- ○ Blue light filter
+
 - ○ Global keyboard shortcuts
 
 ---
 
 ## Download
 
-**Latest Release:** [v1.0.0](https://github.com/rahad-hossain/BlinkBreak/releases/latest)
+**Latest Release:** [v1.1.0](https://github.com/rahad-hossain/BlinkBreak/releases/latest)
 
-**Installer (Recommended):** `BlinkBreak Setup 1.0.0.exe`
+**Installer (Recommended):** `BlinkBreak Setup 1.1.0.exe`
+
 - Installs to Program Files with shortcuts
 
-**Portable:** `BlinkBreak 1.0.0.exe`
+**Portable:** `BlinkBreak 1.1.0.exe`
+
 - No installation required
 
 **Requirements:** Windows 10/11 (64-bit)
@@ -117,6 +122,7 @@ npm run build:electron
 ## Development
 
 ### Project Structure
+
 ```
 BlinkBreak/
 ├── src/
@@ -129,6 +135,7 @@ BlinkBreak/
 ```
 
 ### Available Commands
+
 ```bash
 npm run dev             # Start development server
 npm run build           # Build all processes
