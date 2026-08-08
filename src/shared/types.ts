@@ -1,182 +1,229 @@
-export type BreakMode = 'hard' | 'soft' | 'smart'
-export type Theme = 'dark-neon' | 'white'
+export type BreakMode = "hard" | "soft" | "smart";
+export type Theme = "dark-neon" | "white";
 
 export interface Settings {
-  mode: BreakMode
-  interval: number // minutes
-  duration: number // seconds
-  autoLaunch: boolean
-  theme: Theme
+  mode: BreakMode;
+  interval: number; // minutes
+  duration: number; // seconds
+  autoLaunch: boolean;
+  theme: Theme;
   blueLightFilter: {
-    enabled: boolean
-    intensity: number
-    schedule: boolean
-    startTime: string
-    endTime: string
-  }
+    enabled: boolean;
+    intensity: number;
+    schedule: boolean;
+    startTime: string;
+    endTime: string;
+  };
   colorMask: {
-    enabled: boolean
-    intensity: number
-    red: number
-    green: number
-    blue: number
-  }
+    enabled: boolean;
+    intensity: number;
+    red: number;
+    green: number;
+    blue: number;
+  };
   postureReminder: {
-    enabled: boolean
-    interval: number
-  }
+    enabled: boolean;
+    interval: number;
+  };
   hydrationReminder: {
-    enabled: boolean
-    interval: number
-  }
+    enabled: boolean;
+    interval: number;
+  };
+  sounds: {
+    enabled: boolean;
+    break: string | null;
+    posture: string | null;
+    hydration: string | null;
+  };
   focusMode: {
-    enabled: boolean
-    blockedDomains: string[]
-    pomodoroLength: number
-    shortBreak: number
-    longBreak: number
-  }
-  smartModeWhitelist: string[]
+    enabled: boolean;
+    blockedDomains: string[];
+    pomodoroLength: number;
+    shortBreak: number;
+    longBreak: number;
+  };
+  smartModeWhitelist: string[];
 }
 
 export interface Statistics {
-  totalBreaksTaken: number
-  totalBreaksSkipped: number
-  currentStreak: number
-  longestStreak: number
-  lastBreakDate: string
-  dailyStats: DailyStats[]
-  weeklyStats: WeeklyStats[]
-  monthlyStats: MonthlyStats[]
-  weekComparison: WeekComparison
-  recentActivity: BreakEvent[]
+  totalBreaksTaken: number;
+  totalBreaksSkipped: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastBreakDate: string;
+  dailyStats: DailyStats[];
+  weeklyStats: WeeklyStats[];
+  monthlyStats: MonthlyStats[];
+  weekComparison: WeekComparison;
+  recentActivity: BreakEvent[];
 }
 
 export interface BreakEvent {
-  timestamp: number // Unix timestamp
-  type: 'taken' | 'skipped'
-  duration: number // seconds
+  timestamp: number; // Unix timestamp
+  type: "taken" | "skipped";
+  duration: number; // seconds
 }
 
 export interface DailyStats {
-  date: string // YYYY-MM-DD
-  breaksTaken: number
-  breaksSkipped: number
-  screenTime: number // minutes
-  completionRate: number // percentage
+  date: string; // YYYY-MM-DD
+  breaksTaken: number;
+  breaksSkipped: number;
+  screenTime: number; // minutes
+  completionRate: number; // percentage
 }
 
 export interface WeeklyStats {
-  weekStart: string // YYYY-MM-DD (Monday)
-  breaksTaken: number
-  breaksSkipped: number
-  screenTime: number
-  completionRate: number
+  weekStart: string; // YYYY-MM-DD (Monday)
+  breaksTaken: number;
+  breaksSkipped: number;
+  screenTime: number;
+  completionRate: number;
 }
 
 export interface MonthlyStats {
-  month: string // YYYY-MM
-  breaksTaken: number
-  breaksSkipped: number
-  screenTime: number
-  completionRate: number
+  month: string; // YYYY-MM
+  breaksTaken: number;
+  breaksSkipped: number;
+  screenTime: number;
+  completionRate: number;
 }
 
 export interface WeekComparison {
   currentWeek: {
-    breaksTaken: number
-    completionRate: number
-  }
+    breaksTaken: number;
+    completionRate: number;
+  };
   previousWeek: {
-    breaksTaken: number
-    completionRate: number
-  }
+    breaksTaken: number;
+    completionRate: number;
+  };
   improvement: {
-    breaks: number // difference
-    breaksPercent: number // percentage change
-    completionRate: number // difference in percentage points
-  }
+    breaks: number; // difference
+    breaksPercent: number; // percentage change
+    completionRate: number; // difference in percentage points
+  };
 }
 
 export interface ElectronAPI {
   // Settings
-  getSettings: () => Promise<Settings>
-  
+  getSettings: () => Promise<Settings>;
+
   // Theme
-  setTheme: (theme: Theme) => void
-  
+  setTheme: (theme: Theme) => void;
+
   // Timer
-  startTimer: (interval: number, duration: number, mode: BreakMode) => void
-  stopTimer: () => void
-  pauseTimer: () => void
-  resumeTimer: () => void
-  skipBreak: () => void
-  getTimerStatus: () => Promise<TimerStatus>
-  onTimerStatus: (callback: (status: TimerStatus) => void) => void
-  onBreakStart: (callback: (data: { mode: BreakMode; duration: number }) => void) => void
-  onBreakEnd: (callback: () => void) => void
-  
+  startTimer: (interval: number, duration: number, mode: BreakMode) => void;
+  stopTimer: () => void;
+  pauseTimer: () => void;
+  resumeTimer: () => void;
+  skipBreak: () => void;
+  getTimerStatus: () => Promise<TimerStatus>;
+  onTimerStatus: (callback: (status: TimerStatus) => void) => void;
+  onBreakStart: (
+    callback: (data: { mode: BreakMode; duration: number }) => void,
+  ) => void;
+  onBreakEnd: (callback: () => void) => void;
+
   // Tray
-  onTrayTogglePause: (callback: () => void) => void
-  onUpdateTray: (callback: (status: TimerStatus) => void) => void
-  updateTrayStatus: (status: TimerStatus) => void
-  
+  onTrayTogglePause: (callback: () => void) => void;
+  onUpdateTray: (callback: (status: TimerStatus) => void) => void;
+  updateTrayStatus: (status: TimerStatus) => void;
+
   // Auto-launch
-  getAutoLaunchStatus: () => Promise<boolean>
-  enableAutoLaunch: () => Promise<{ success: boolean; error?: any }>
-  disableAutoLaunch: () => Promise<{ success: boolean; error?: any }>
-  
+  getAutoLaunchStatus: () => Promise<boolean>;
+  enableAutoLaunch: () => Promise<{ success: boolean; error?: any }>;
+  disableAutoLaunch: () => Promise<{ success: boolean; error?: any }>;
+
   // Statistics
-  getStatistics: () => Promise<Statistics>
-  recordBreakTaken: (duration: number) => Promise<void>
-  recordBreakSkipped: (duration: number) => Promise<void>
-  
+  getStatistics: () => Promise<Statistics>;
+  recordBreakTaken: (duration: number) => Promise<void>;
+  recordBreakSkipped: (duration: number) => Promise<void>;
+
   // Blue Light Filter
-  enableBlueLightFilter: (intensity: number) => void
-  disableBlueLightFilter: () => void
-  updateBlueLightIntensity: (intensity: number) => void
-  
+  enableBlueLightFilter: (intensity: number) => void;
+  disableBlueLightFilter: () => void;
+  updateBlueLightIntensity: (intensity: number) => void;
+
   // Color Mask
-  enableColorMask: (intensity: number, red: number, green: number, blue: number) => void
-  disableColorMask: () => void
-  updateColorMask: (intensity: number, red: number, green: number, blue: number) => void
-  
+  enableColorMask: (
+    intensity: number,
+    red: number,
+    green: number,
+    blue: number,
+  ) => void;
+  disableColorMask: () => void;
+  updateColorMask: (
+    intensity: number,
+    red: number,
+    green: number,
+    blue: number,
+  ) => void;
+
   // Monitor Controls
-  setMonitorBrightness: (value: number) => Promise<boolean>
-  setMonitorContrast: (value: number) => Promise<boolean>
-  getMonitorBrightness: () => Promise<number>
+  setMonitorBrightness: (value: number) => Promise<boolean>;
+  setMonitorContrast: (value: number) => Promise<boolean>;
+  getMonitorBrightness: () => Promise<number>;
 
   // Reminders
-  setReminderConfig: (type: 'posture' | 'hydration', enabled: boolean, intervalMinutes: number) => void
-  snoozeReminder: (type: 'posture' | 'hydration', minutes: number) => void
+  setReminderConfig: (
+    type: "posture" | "hydration",
+    enabled: boolean,
+    intervalMinutes: number,
+  ) => void;
+  snoozeReminder: (type: "posture" | "hydration", minutes: number) => void;
+
+  // Sounds
+  pickSoundFile: () => Promise<string | null>;
+  setSoundConfig: (config: {
+    enabled: boolean;
+    break: string | null;
+    posture: string | null;
+    hydration: string | null;
+  }) => void;
 
   // Smart Mode
-  setSmartMode: (enabled: boolean) => void
-  setManualMeeting: (inMeeting: boolean) => void
-  getSmartModeStatus: () => Promise<{ enabled: boolean; inMeeting: boolean; detectedBy: string | null; manualOverride: boolean }>
-  onSmartModeStatus: (callback: (status: { enabled: boolean; inMeeting: boolean; detectedBy: string | null; manualOverride: boolean }) => void) => void
-  setSmartModeWhitelist: (list: string[]) => void
-  getSmartModeWhitelist: () => Promise<string[]>
+  setSmartMode: (enabled: boolean) => void;
+  setManualMeeting: (inMeeting: boolean) => void;
+  getSmartModeStatus: () => Promise<{
+    enabled: boolean;
+    inMeeting: boolean;
+    detectedBy: string | null;
+    manualOverride: boolean;
+  }>;
+  onSmartModeStatus: (
+    callback: (status: {
+      enabled: boolean;
+      inMeeting: boolean;
+      detectedBy: string | null;
+      manualOverride: boolean;
+    }) => void,
+  ) => void;
+  setSmartModeWhitelist: (list: string[]) => void;
+  getSmartModeWhitelist: () => Promise<string[]>;
 
   // Focus Mode / Website Blocker
-  setFocusMode: (enabled: boolean) => Promise<{ success: boolean; error?: string; needsElevation?: boolean }>
-  setBlockedDomains: (domains: string[]) => Promise<{ success: boolean; error?: string }>
-  getBlockedDomains: () => Promise<string[]>
-  getFocusModeStatus: () => Promise<boolean>
-  getHostsWriteAccess: () => Promise<boolean>
+  setFocusMode: (
+    enabled: boolean,
+  ) => Promise<{ success: boolean; error?: string; needsElevation?: boolean }>;
+  setBlockedDomains: (
+    domains: string[],
+  ) => Promise<{ success: boolean; error?: string }>;
+  getBlockedDomains: () => Promise<string[]>;
+  getFocusModeStatus: () => Promise<boolean>;
+  getHostsWriteAccess: () => Promise<boolean>;
 }
 
 export interface TimerStatus {
-  isRunning: boolean
-  isPaused: boolean
-  remainingTime: number
-  interval: number
-  duration: number
-  mode: BreakMode
+  isRunning: boolean;
+  isPaused: boolean;
+  remainingTime: number;
+  interval: number;
+  duration: number;
+  mode: BreakMode;
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI
+    electronAPI: ElectronAPI;
   }
 }

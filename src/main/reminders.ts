@@ -17,6 +17,11 @@ export class ReminderManager {
   private timers: Map<ReminderType, NodeJS.Timeout> = new Map();
   private snoozeTimers: Map<ReminderType, NodeJS.Timeout> = new Map();
   private popups: Map<ReminderType, BrowserWindow> = new Map();
+  private settingsManager: any = null;
+
+  constructor(settingsManager?: any) {
+    this.settingsManager = settingsManager ?? null;
+  }
 
   private readonly meta: Record<ReminderType, { title: string; body: string }> =
     {
@@ -118,16 +123,20 @@ export class ReminderManager {
       ? path.join(__dirname, "../../src/renderer/reminder.html")
       : path.join(__dirname, "../renderer/reminder.html");
 
+    const soundPath = this.settingsManager?.getSettings()?.sounds?.[type] ?? "";
+
     win.loadFile(htmlPath, {
-      query: { type, title, body },
+      query: { type, title, body, sound: soundPath ?? "" },
     });
 
     win.on("closed", () => this.popups.delete(type));
     this.popups.set(type, win);
 
-    // Play a short beep for the reminder
+    // As a fallback, play a short beep from main process
     try {
-      shell.beep();
+      if (!this.settingsManager?.getSettings()?.sounds?.enabled) {
+        shell.beep();
+      }
     } catch (e) {
       console.log("[Reminders] beep failed", e);
     }

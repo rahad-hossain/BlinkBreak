@@ -2,130 +2,139 @@ interface HomeProps {
   onNavigate: (tab: string) => void
 }
 
+const highlights = [
+  { title: 'Smart pauses', description: 'Breaks adapt to your flow and stay out of the way when you need focus.' },
+  { title: 'Gentle reminders', description: 'Hydration and posture prompts help you reset without breaking concentration.' },
+  { title: 'Display comfort', description: 'Tune brightness, contrast, and warm lighting to fit your environment.' }
+]
+
+const modes = [
+  {
+    title: 'Hard Mode',
+    description: 'Fully pause your screen with a focused lock for deep work.',
+    icon: '🔒'
+  },
+  {
+    title: 'Soft Mode',
+    description: 'Use a calm popup reminder when you want a lighter nudge.',
+    icon: '🔔'
+  },
+  {
+    title: 'Smart Mode',
+    description: 'Let BlinkBreak detect active sessions and pause automatically.',
+    icon: '⚡'
+  }
+]
+
+const features = [
+  {
+    title: '20-20-20 rhythm',
+    description: 'A simple wellness loop that helps reduce eye strain throughout the day.',
+    icon: '👁️'
+  },
+  {
+    title: 'Warm screen comfort',
+    description: 'Create a softer visual environment with blue-light and color controls.',
+    icon: '🌙'
+  },
+  {
+    title: 'Hydration & posture',
+    description: 'Stay refreshed and aligned with timely, customizable reminders.',
+    icon: '💧'
+  },
+  {
+    title: 'Personalized setup',
+    description: 'Fine-tune your flow with modern monitor presets and notification sounds.',
+    icon: '🎛️'
+  }
+]
+
 export default function Home({ onNavigate }: HomeProps) {
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="text-center py-12">
-        <div className="flex justify-center mb-6">
-          <img 
-            src="./logo.jpg" 
-            alt="BlinkBreak Logo" 
-            className="w-24 h-24 rounded-2xl shadow-lg logo-border"
-          />
-        </div>
-        <h1 className="text-5xl font-bold text-foreground mb-4">BlinkBreak</h1>
-        <p className="text-xl text-muted-foreground mb-8">Your Eyes Deserve a Break</p>
-        <div className="flex gap-4 justify-center">
-          <div className="px-6 py-3 bg-primary/10 text-primary rounded-lg font-medium">
-            ⏱️ Smart Break Timer
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-primary/15 via-card to-secondary/10 p-4 shadow-sm sm:p-6 lg:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <img src="./logo.jpg" alt="BlinkBreak Logo" className="h-14 w-14 rounded-2xl border border-border/70 object-cover shadow-sm" />
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.25em] text-primary">Eye care assistant</p>
+                <h1 className="text-3xl font-semibold text-foreground sm:text-4xl">A calmer way to work.</h1>
+              </div>
+            </div>
+            <p className="text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+              BlinkBreak helps you protect your focus and comfort with intelligent breaks, wellness reminders, and display controls that feel effortless.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button onClick={() => onNavigate('timer')} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+                Start your session
+              </button>
+              <button onClick={() => onNavigate('personalize')} className="rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted">
+                Fine-tune display comfort
+              </button>
+            </div>
           </div>
-          <div className="px-6 py-3 bg-primary/10 text-primary rounded-lg font-medium">
-            📊 Track Progress
-          </div>
-          <div className="px-6 py-3 bg-primary/10 text-primary rounded-lg font-medium">
-            🎨 Personalize
-          </div>
-        </div>
-      </div>
 
-      {/* Break Modes */}
-      <div className="bg-card p-8 rounded-lg border border-border">
-        <h2 className="text-2xl font-bold text-foreground mb-6 text-center">Choose Your Break Mode</h2>
-        <div className="grid grid-cols-3 gap-6">
-          <div className="text-center p-6 bg-muted/30 rounded-lg hover:bg-primary/10 transition-all cursor-pointer hover-lift">
-            <div className="text-5xl mb-4">🔒</div>
-            <div className="text-xl font-bold text-foreground mb-2">Hard Mode</div>
-            <div className="text-sm text-muted-foreground">Full screen lock</div>
-          </div>
-          <div className="text-center p-6 bg-muted/30 rounded-lg hover:bg-primary/10 transition-all cursor-pointer hover-lift">
-            <div className="text-5xl mb-4">🔔</div>
-            <div className="text-xl font-bold text-foreground mb-2">Soft Mode</div>
-            <div className="text-sm text-muted-foreground">Gentle reminder</div>
-          </div>
-          <div className="text-center p-6 bg-muted/30 rounded-lg hover:bg-primary/10 transition-all cursor-pointer hover-lift">
-            <div className="text-5xl mb-4">🤖</div>
-            <div className="text-xl font-bold text-foreground mb-2">Smart Mode</div>
-            <div className="text-sm text-muted-foreground">Auto-detect</div>
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[360px]">
+            {highlights.map((item) => (
+              <div key={item.title} className="rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur">
+                <h3 className="font-semibold text-foreground">{item.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stats Preview */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-card p-6 rounded-lg border border-border text-center hover-lift">
-          <div className="text-4xl mb-2">12</div>
-          <div className="text-sm text-muted-foreground">Breaks Today</div>
-        </div>
-        <div className="bg-card p-6 rounded-lg border border-border text-center hover-lift">
-          <div className="text-4xl mb-2">94%</div>
-          <div className="text-sm text-muted-foreground">Completion</div>
-        </div>
-        <div className="bg-card p-6 rounded-lg border border-border text-center hover-lift">
-          <div className="text-4xl mb-2">7</div>
-          <div className="text-sm text-muted-foreground">Day Streak</div>
-        </div>
-        <div className="bg-card p-6 rounded-lg border border-border text-center hover-lift">
-          <div className="text-4xl mb-2">6.5h</div>
-          <div className="text-sm text-muted-foreground">Screen Time</div>
-        </div>
-      </div>
-
-      {/* Features Grid */}
-      <div className="grid grid-cols-2 gap-6">
-        <div className="bg-card p-6 rounded-lg border border-border hover:border-primary/50 transition-all hover-lift">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="text-4xl">⏱️</div>
-            <div className="text-xl font-bold text-foreground">20-20-20 Rule</div>
+      <section className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
+        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.25em] text-primary">Choose your rhythm</p>
+            <h2 className="text-2xl font-semibold text-foreground">Pick the break style that fits your day</h2>
           </div>
-          <div className="text-muted-foreground">Every 20 minutes, look 20 feet away for 20 seconds</div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {modes.map((mode) => (
+            <div key={mode.title} className="rounded-2xl border border-border/60 bg-background/70 p-6 transition hover:-translate-y-0.5 hover:border-primary/40">
+              <div className="text-4xl">{mode.icon}</div>
+              <h3 className="mt-4 text-lg font-semibold text-foreground">{mode.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{mode.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
+          <p className="text-sm font-medium uppercase tracking-[0.25em] text-primary">Why people use BlinkBreak</p>
+          <h2 className="mt-2 text-2xl font-semibold text-foreground">Healthy habits, built into your routine</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {features.map((feature) => (
+              <div key={feature.title} className="rounded-2xl border border-border/60 bg-background/70 p-5">
+                <div className="text-3xl">{feature.icon}</div>
+                <h3 className="mt-3 font-semibold text-foreground">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{feature.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="bg-card p-6 rounded-lg border border-border hover:border-primary/50 transition-all hover-lift">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="text-4xl">🌙</div>
-            <div className="text-xl font-bold text-foreground">Blue Light Filter</div>
-          </div>
-          <div className="text-muted-foreground">Reduce eye strain with warm color temperature</div>
-        </div>
-
-        <div className="bg-card p-6 rounded-lg border border-border hover:border-primary/50 transition-all hover-lift">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="text-4xl">💧</div>
-            <div className="text-xl font-bold text-foreground">Stay Hydrated</div>
-          </div>
-          <div className="text-muted-foreground">Regular reminders to drink water</div>
-        </div>
-
-        <div className="bg-card p-6 rounded-lg border border-border hover:border-primary/50 transition-all hover-lift">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="text-4xl">🧘</div>
-            <div className="text-xl font-bold text-foreground">Posture Check</div>
-          </div>
-          <div className="text-muted-foreground">Reminders to maintain good posture</div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-gradient-to-r from-primary/20 to-secondary/20 p-8 rounded-lg border border-primary/30">
-        <div className="text-center">
-          <h3 className="text-2xl font-bold text-foreground mb-4">Ready to Start?</h3>
-          <div className="flex gap-4 justify-center">
-            <button 
-              onClick={() => onNavigate('timer')}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 font-medium transition-all hover:scale-105 active:scale-95"
-            >
-              Start Timer
+        <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-primary/20 via-card to-secondary/10 p-5 shadow-sm sm:p-7">
+          <p className="text-sm font-medium uppercase tracking-[0.25em] text-primary">Ready when you are</p>
+          <h3 className="mt-2 text-2xl font-semibold text-foreground">Start fresh in one click</h3>
+          <p className="mt-3 text-sm leading-7 text-muted-foreground">
+            Open your timer, choose a mode, and let BlinkBreak guide you through healthier work sessions.
+          </p>
+          <div className="mt-6 space-y-3">
+            <button onClick={() => onNavigate('timer')} className="flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+              Launch timer
             </button>
-            <button 
-              onClick={() => onNavigate('settings')}
-              className="px-8 py-3 bg-card text-foreground rounded-lg hover:bg-muted font-medium transition-all border border-border hover:scale-105 active:scale-95"
-            >
-              View Settings
+            <button onClick={() => onNavigate('settings')} className="flex w-full items-center justify-center rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-muted">
+              Open settings
             </button>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

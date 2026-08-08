@@ -1,6 +1,7 @@
 import { BrowserWindow, shell } from "electron";
 import { BreakMode } from "@shared/types";
 import { BreakWindowManager } from "./breakWindow";
+import { SettingsManager } from "./storage";
 
 export class TimerManager {
   private interval: number = 20; // minutes
@@ -14,16 +15,19 @@ export class TimerManager {
   private startTime: number = 0;
   private mainWindow: BrowserWindow | null = null;
   private breakWindowManager: BreakWindowManager;
+  private settingsManager: SettingsManager;
   private onBreakTaken?: (duration: number) => void;
   private onBreakSkipped?: (duration: number) => void;
 
   constructor(
     mainWindow: BrowserWindow,
+    settingsManager: SettingsManager,
     onBreakTaken?: (duration: number) => void,
     onBreakSkipped?: (duration: number) => void,
   ) {
     this.mainWindow = mainWindow;
-    this.breakWindowManager = new BreakWindowManager();
+    this.settingsManager = settingsManager;
+    this.breakWindowManager = new BreakWindowManager(settingsManager);
     this.onBreakTaken = onBreakTaken;
     this.onBreakSkipped = onBreakSkipped;
   }
@@ -146,9 +150,12 @@ export class TimerManager {
       this.breakWindowManager.showSoftModeBreak(this.duration);
     }
 
-    // Play notification sound when a break starts
+    // Play fallback beep from main process only if sounds are disabled
     try {
-      shell.beep();
+      const enabled = this.settingsManager?.getSettings()?.sounds?.enabled;
+      if (!enabled) {
+        shell.beep();
+      }
     } catch (e) {
       console.log("[Timer] beep failed", e);
     }

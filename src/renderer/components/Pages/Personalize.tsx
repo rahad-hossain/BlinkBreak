@@ -4,6 +4,7 @@ export default function Personalize() {
   // Monitor controls
   const [brightness, setBrightness] = useState(70)
   const [contrast, setContrast] = useState(75)
+  const [contrastMessage, setContrastMessage] = useState<string | null>(null)
   const [blueLightFilter, setBlueLightFilter] = useState(false)
   const [blueLightIntensity, setBlueLightIntensity] = useState(30)
 
@@ -111,13 +112,24 @@ export default function Personalize() {
     { name: 'Dim', brightness: 5, contrast: 50, description: 'Very low for dark environments' }
   ]
 
-  const applyPreset = (preset: typeof brightnessPresets[0]) => {
+  const applyPreset = async (preset: typeof brightnessPresets[0]) => {
     setBrightness(preset.brightness)
     setContrast(preset.contrast)
 
     // Apply to actual monitor
     window.electronAPI.setMonitorBrightness(preset.brightness)
-    window.electronAPI.setMonitorContrast(preset.contrast)
+    const success = await window.electronAPI.setMonitorContrast(preset.contrast)
+    setContrastMessage(success
+      ? null
+      : 'Contrast control is not supported on this monitor or driver. Try the monitor OSD instead.')
+  }
+
+  const handleContrastChange = async (value: number) => {
+    setContrast(value)
+    const success = await window.electronAPI.setMonitorContrast(value)
+    setContrastMessage(success
+      ? null
+      : 'Contrast control is not supported on this monitor or driver. Try the monitor OSD instead.')
   }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
@@ -198,8 +210,7 @@ export default function Personalize() {
               value={contrast}
               onChange={(e) => {
                 const value = Number(e.target.value)
-                setContrast(value)
-                window.electronAPI.setMonitorContrast(value)
+                void handleContrastChange(value)
               }}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
@@ -207,6 +218,9 @@ export default function Personalize() {
               <span>Low</span>
               <span>High</span>
             </div>
+            {contrastMessage && (
+              <p className="text-xs text-amber-600 mt-2">{contrastMessage}</p>
+            )}
           </div>
         </div>
 
@@ -299,8 +313,8 @@ export default function Personalize() {
                       key={preset.name}
                       onClick={() => handleColorChange(index)}
                       className={`relative p-3 rounded-lg transition-all ${selectedColorIndex === index
-                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                          : 'hover:ring-2 hover:ring-muted'
+                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                        : 'hover:ring-2 hover:ring-muted'
                         }`}
                       style={{ backgroundColor: `rgb(${preset.rgb[0]}, ${preset.rgb[1]}, ${preset.rgb[2]})` }}
                     >

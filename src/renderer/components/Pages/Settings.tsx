@@ -17,6 +17,10 @@ export default function Settings() {
   const [focusLoading, setFocusLoading] = useState(false)
   const [focusError, setFocusError] = useState<string | null>(null)
   const [showElevationNotice, setShowElevationNotice] = useState(false)
+  const [soundsEnabled, setSoundsEnabled] = useState(true)
+  const [breakSound, setBreakSound] = useState<string | null>(null)
+  const [postureSound, setPostureSound] = useState<string | null>(null)
+  const [hydrationSound, setHydrationSound] = useState<string | null>(null)
 
   useEffect(() => {
     window.electronAPI.getAutoLaunchStatus().then((enabled) => setAutoLaunch(enabled))
@@ -25,6 +29,10 @@ export default function Settings() {
       setPostureInterval(settings.postureReminder.interval)
       setHydrationEnabled(settings.hydrationReminder.enabled)
       setHydrationInterval(settings.hydrationReminder.interval)
+      setSoundsEnabled(settings.sounds?.enabled ?? true)
+      setBreakSound(settings.sounds?.break ?? null)
+      setPostureSound(settings.sounds?.posture ?? null)
+      setHydrationSound(settings.sounds?.hydration ?? null)
     })
     window.electronAPI.getSmartModeWhitelist().then(setWhitelist)
     window.electronAPI.getBlockedDomains().then(setBlockedDomains)
@@ -128,6 +136,28 @@ export default function Settings() {
     </button>
   )
 
+  const pickSound = async (type: 'break' | 'posture' | 'hydration') => {
+    const path = await window.electronAPI.pickSoundFile()
+    if (!path) return
+
+    if (type === 'break') setBreakSound(path)
+    if (type === 'posture') setPostureSound(path)
+    if (type === 'hydration') setHydrationSound(path)
+
+    // Save to settings
+    window.electronAPI.setSoundConfig({
+      enabled: soundsEnabled,
+      break: type === 'break' ? path : breakSound,
+      posture: type === 'posture' ? path : postureSound,
+      hydration: type === 'hydration' ? path : hydrationSound
+    })
+  }
+
+  const handleSoundsToggle = (newVal: boolean) => {
+    setSoundsEnabled(newVal)
+    window.electronAPI.setSoundConfig({ enabled: newVal, break: breakSound, posture: postureSound, hydration: hydrationSound })
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -151,7 +181,7 @@ export default function Settings() {
               <div className="text-foreground font-medium">Minimize to system tray</div>
               <div className="text-sm text-muted-foreground">Keep running in background</div>
             </div>
-            <Toggle enabled={minimizeToTray} onChange={() => {}} />
+            <Toggle enabled={minimizeToTray} onChange={() => { }} />
           </div>
         </div>
       </div>
@@ -163,24 +193,22 @@ export default function Settings() {
           <div>
             <label className="text-foreground font-medium mb-3 block">Theme</label>
             <div className="grid grid-cols-2 gap-4">
-              <button 
+              <button
                 onClick={() => setTheme('dark-neon')}
-                className={`p-4 border-2 rounded-lg text-left transition-all ${
-                  theme === 'dark-neon'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
-                }`}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${theme === 'dark-neon'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/50'
+                  }`}
               >
                 <div className="font-semibold text-foreground">Dark Neon</div>
                 <div className="text-sm text-muted-foreground mt-1">Eye-friendly dark theme</div>
               </button>
-              <button 
+              <button
                 onClick={() => setTheme('white')}
-                className={`p-4 border-2 rounded-lg text-left transition-all ${
-                  theme === 'white'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
-                }`}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${theme === 'white'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/50'
+                  }`}
               >
                 <div className="font-semibold text-foreground">White</div>
                 <div className="text-sm text-muted-foreground mt-1">Clean light theme</div>
@@ -385,7 +413,7 @@ export default function Settings() {
               <div className="text-foreground font-medium">Smart Mode Detection</div>
               <div className="text-sm text-muted-foreground">Auto-pause during meetings and presentations</div>
             </div>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">v1.2.0</span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">v1.3.0</span>
           </div>
         </div>
       </div>
@@ -411,13 +439,52 @@ export default function Settings() {
         </div>
       </div>
 
+      <div className="bg-card p-6 rounded-lg border border-border">
+        <h3 className="text-xl font-semibold text-foreground mb-4">Sounds</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-foreground font-medium">Enable Sounds</div>
+              <div className="text-sm text-muted-foreground">Play sounds for breaks and reminders</div>
+            </div>
+            <Toggle enabled={soundsEnabled} onChange={() => handleSoundsToggle(!soundsEnabled)} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Break Sound</div>
+              <div className="flex gap-2">
+                <div className="flex-1 truncate">{breakSound ? breakSound.split(/\\|\//).pop() : 'Default beep'}</div>
+                <button onClick={() => pickSound('break')} className="px-3 py-1 bg-muted rounded-md">Choose</button>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Posture Sound</div>
+              <div className="flex gap-2">
+                <div className="flex-1 truncate">{postureSound ? postureSound.split(/\\|\//).pop() : 'Default beep'}</div>
+                <button onClick={() => pickSound('posture')} className="px-3 py-1 bg-muted rounded-md">Choose</button>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Hydration Sound</div>
+              <div className="flex gap-2">
+                <div className="flex-1 truncate">{hydrationSound ? hydrationSound.split(/\\|\//).pop() : 'Default beep'}</div>
+                <button onClick={() => pickSound('hydration')} className="px-3 py-1 bg-muted rounded-md">Choose</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* About */}
       <div className="bg-card p-6 rounded-lg border border-border">
         <h3 className="text-xl font-semibold text-foreground mb-4">About</h3>
         <div className="space-y-2 text-muted-foreground">
           <div className="flex justify-between">
             <span>Version</span>
-            <span className="text-foreground">1.0.0</span>
+            <span className="text-foreground">1.2.0</span>
           </div>
           <div className="flex justify-between">
             <span>Platform</span>
