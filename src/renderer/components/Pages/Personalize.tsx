@@ -4,14 +4,15 @@ export default function Personalize() {
   // Monitor controls
   const [brightness, setBrightness] = useState(70)
   const [contrast, setContrast] = useState(75)
+  const [contrastMessage, setContrastMessage] = useState<string | null>(null)
   const [blueLightFilter, setBlueLightFilter] = useState(false)
   const [blueLightIntensity, setBlueLightIntensity] = useState(30)
-  
+
   // Color Mask controls
   const [colorMask, setColorMask] = useState(false)
   const [maskIntensity, setMaskIntensity] = useState(30)
   const [selectedColorIndex, setSelectedColorIndex] = useState(0)
-  
+
   // Color presets
   const colorPresets = [
     { name: 'Green', rgb: [34, 197, 94] },
@@ -31,19 +32,19 @@ export default function Personalize() {
     window.electronAPI.getSettings().then((settings) => {
       setBlueLightFilter(settings.blueLightFilter.enabled)
       setBlueLightIntensity(settings.blueLightFilter.intensity)
-      
+
       setColorMask(settings.colorMask.enabled)
       setMaskIntensity(settings.colorMask.intensity)
-      
+
       // Find matching color preset
       const matchingIndex = colorPresets.findIndex(
         preset => preset.rgb[0] === settings.colorMask.red &&
-                  preset.rgb[1] === settings.colorMask.green &&
-                  preset.rgb[2] === settings.colorMask.blue
+          preset.rgb[1] === settings.colorMask.green &&
+          preset.rgb[2] === settings.colorMask.blue
       )
       setSelectedColorIndex(matchingIndex >= 0 ? matchingIndex : 0)
     })
-    
+
     // Load current monitor brightness
     window.electronAPI.getMonitorBrightness().then((value) => {
       setBrightness(value)
@@ -56,7 +57,7 @@ export default function Personalize() {
   const handleBlueLightToggle = () => {
     const newState = !blueLightFilter
     setBlueLightFilter(newState)
-    
+
     if (newState) {
       window.electronAPI.enableBlueLightFilter(blueLightIntensity)
     } else {
@@ -76,7 +77,7 @@ export default function Personalize() {
   const handleColorMaskToggle = () => {
     const newState = !colorMask
     setColorMask(newState)
-    
+
     if (newState) {
       const [r, g, b] = colorPresets[selectedColorIndex].rgb
       window.electronAPI.enableColorMask(maskIntensity, r, g, b)
@@ -107,29 +108,39 @@ export default function Personalize() {
     { name: 'Outdoor', brightness: 100, contrast: 85, description: 'Maximum for bright sunlight' },
     { name: 'Indoor', brightness: 70, contrast: 75, description: 'Comfortable for indoor use' },
     { name: 'Evening', brightness: 50, contrast: 70, description: 'Reduced for evening' },
-    { name: 'Night Mode', brightness: 30, contrast: 65, description: 'Low brightness for night' }
+    { name: 'Night Mode', brightness: 30, contrast: 65, description: 'Low brightness for night' },
+    { name: 'Dim', brightness: 5, contrast: 50, description: 'Very low for dark environments' }
   ]
 
-  const applyPreset = (preset: typeof brightnessPresets[0]) => {
+  const applyPreset = async (preset: typeof brightnessPresets[0]) => {
     setBrightness(preset.brightness)
     setContrast(preset.contrast)
-    
+
     // Apply to actual monitor
     window.electronAPI.setMonitorBrightness(preset.brightness)
-    window.electronAPI.setMonitorContrast(preset.contrast)
+    const success = await window.electronAPI.setMonitorContrast(preset.contrast)
+    setContrastMessage(success
+      ? null
+      : 'Contrast control is not supported on this monitor or driver. Try the monitor OSD instead.')
+  }
+
+  const handleContrastChange = async (value: number) => {
+    setContrast(value)
+    const success = await window.electronAPI.setMonitorContrast(value)
+    setContrastMessage(success
+      ? null
+      : 'Contrast control is not supported on this monitor or driver. Try the monitor OSD instead.')
   }
 
   const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
-    <button 
+    <button
       onClick={onChange}
-      className={`w-12 h-6 rounded-full relative transition-colors ${
-        enabled ? 'bg-primary' : 'bg-muted'
-      }`}
-    >
-      <div 
-        className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
-          enabled ? 'right-0.5' : 'left-0.5'
+      className={`w-12 h-6 rounded-full relative transition-colors ${enabled ? 'bg-primary' : 'bg-muted'
         }`}
+    >
+      <div
+        className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${enabled ? 'right-0.5' : 'left-0.5'
+          }`}
       ></div>
     </button>
   )
@@ -144,11 +155,11 @@ export default function Personalize() {
       {/* Monitor Controls */}
       <div className="bg-card p-6 rounded-lg border border-border">
         <h3 className="text-xl font-semibold text-foreground mb-4">Monitor Controls</h3>
-        
+
         {/* Presets */}
         <div className="mb-6">
           <label className="text-foreground font-medium mb-3 block">Quick Presets</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {brightnessPresets.map((preset) => (
               <button
                 key={preset.name}
@@ -169,10 +180,10 @@ export default function Personalize() {
               <label className="text-foreground font-medium">Brightness</label>
               <span className="text-primary font-semibold">{brightness}%</span>
             </div>
-            <input 
-              type="range" 
-              min="0" 
-              max="100" 
+            <input
+              type="range"
+              min="0"
+              max="100"
               value={brightness}
               onChange={(e) => {
                 const value = Number(e.target.value)
@@ -192,15 +203,14 @@ export default function Personalize() {
               <label className="text-foreground font-medium">Contrast</label>
               <span className="text-primary font-semibold">{contrast}%</span>
             </div>
-            <input 
-              type="range" 
-              min="0" 
-              max="100" 
+            <input
+              type="range"
+              min="0"
+              max="100"
               value={contrast}
               onChange={(e) => {
                 const value = Number(e.target.value)
-                setContrast(value)
-                window.electronAPI.setMonitorContrast(value)
+                void handleContrastChange(value)
               }}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
@@ -208,6 +218,9 @@ export default function Personalize() {
               <span>Low</span>
               <span>High</span>
             </div>
+            {contrastMessage && (
+              <p className="text-xs text-amber-600 mt-2">{contrastMessage}</p>
+            )}
           </div>
         </div>
 
@@ -235,10 +248,10 @@ export default function Personalize() {
                 <label className="text-foreground font-medium">Filter Intensity</label>
                 <span className="text-primary font-semibold">{blueLightIntensity}%</span>
               </div>
-              <input 
-                type="range" 
-                min="0" 
-                max="100" 
+              <input
+                type="range"
+                min="0"
+                max="100"
                 value={blueLightIntensity}
                 onChange={(e) => handleIntensityChange(Number(e.target.value))}
                 className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
@@ -247,7 +260,7 @@ export default function Personalize() {
                 <span>Subtle</span>
                 <span>Strong</span>
               </div>
-              
+
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground">
                   🌙 Blue light filter reduces blue wavelengths that can disrupt sleep and cause eye fatigue
@@ -277,10 +290,10 @@ export default function Personalize() {
                   <label className="text-foreground font-medium">Mask Intensity</label>
                   <span className="text-primary font-semibold">{maskIntensity}%</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
                   value={maskIntensity}
                   onChange={(e) => handleMaskIntensityChange(Number(e.target.value))}
                   className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
@@ -299,11 +312,10 @@ export default function Personalize() {
                     <button
                       key={preset.name}
                       onClick={() => handleColorChange(index)}
-                      className={`relative p-3 rounded-lg transition-all ${
-                        selectedColorIndex === index 
-                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' 
-                          : 'hover:ring-2 hover:ring-muted'
-                      }`}
+                      className={`relative p-3 rounded-lg transition-all ${selectedColorIndex === index
+                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                        : 'hover:ring-2 hover:ring-muted'
+                        }`}
                       style={{ backgroundColor: `rgb(${preset.rgb[0]}, ${preset.rgb[1]}, ${preset.rgb[2]})` }}
                     >
                       <div className="h-8"></div>
@@ -325,7 +337,7 @@ export default function Personalize() {
                   ))}
                 </div>
               </div>
-              
+
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground">
                   🎨 Choose from preset colors for different moods or lighting conditions

@@ -1,489 +1,512 @@
-import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
-import path from 'path'
-import AutoLaunch from 'auto-launch'
-import { SettingsManager } from './storage'
-import { TimerManager } from './timer'
-import { TrayManager } from './tray'
-import { StatisticsManager } from './statistics'
-import { BlueLightFilterManager } from './blueLightFilter'
-import { ColorMaskManager } from './colorMask'
-import { MonitorControlManager } from './monitorControl'
-import { ReminderManager } from './reminders'
-import { SmartModeManager } from './smartMode'
-import { WebsiteBlockerManager } from './websiteBlocker'
+import { app, BrowserWindow, ipcMain, powerMonitor, dialog } from "electron";
+import path from "path";
+import AutoLaunch from "auto-launch";
+import { SettingsManager } from "./storage";
+import { TimerManager } from "./timer";
+import { TrayManager } from "./tray";
+import { StatisticsManager } from "./statistics";
+import { BlueLightFilterManager } from "./blueLightFilter";
+import { ColorMaskManager } from "./colorMask";
+import { MonitorControlManager } from "./monitorControl";
+import { ReminderManager } from "./reminders";
+import { SmartModeManager } from "./smartMode";
+import { WebsiteBlockerManager } from "./websiteBlocker";
 
-let mainWindow: BrowserWindow | null = null
-let settingsManager: SettingsManager
-let timerManager: TimerManager
-let trayManager: TrayManager
-let statisticsManager: StatisticsManager
-let blueLightFilterManager: BlueLightFilterManager
-let colorMaskManager: ColorMaskManager
-let monitorControlManager: MonitorControlManager
-let reminderManager: ReminderManager
-let smartModeManager: SmartModeManager
-let websiteBlockerManager: WebsiteBlockerManager
-let isQuitting = false
-let screenTimeTracker: NodeJS.Timeout | null = null
+let mainWindow: BrowserWindow | null = null;
+let settingsManager: SettingsManager;
+let timerManager: TimerManager;
+let trayManager: TrayManager;
+let statisticsManager: StatisticsManager;
+let blueLightFilterManager: BlueLightFilterManager;
+let colorMaskManager: ColorMaskManager;
+let monitorControlManager: MonitorControlManager;
+let reminderManager: ReminderManager;
+let smartModeManager: SmartModeManager;
+let websiteBlockerManager: WebsiteBlockerManager;
+let isQuitting = false;
+let screenTimeTracker: NodeJS.Timeout | null = null;
 
-const isDev = process.env.NODE_ENV === 'development'
+const isDev = process.env.NODE_ENV === "development";
 
 // Single instance lock
-const gotTheLock = app.requestSingleInstanceLock()
+const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   // quit running one
-  app.quit()
+  app.quit();
 } else {
   // This is the first instance
-  app.on('second-instance', () => {
+  app.on("second-instance", () => {
     // tried focus our window instead
     if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      if (!mainWindow.isVisible()) mainWindow.show()
-      mainWindow.focus()
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
     }
-  })
+  });
 }
 
 // Auto-launch configuration
 const autoLauncher = new AutoLaunch({
-  name: 'BlinkBreak',
-  path: app.getPath('exe')
-})
+  name: "BlinkBreak",
+  path: app.getPath("exe"),
+});
 
 function createWindow() {
-  const iconPath = isDev 
-    ? path.join(__dirname, '../../build/logo.ico')
-    : path.join(process.resourcesPath, 'logo.ico')
-  
+  const iconPath = isDev
+    ? path.join(__dirname, "../../build/logo.ico")
+    : path.join(process.resourcesPath, "logo.ico");
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 700,
     minWidth: 800,
     minHeight: 550,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
     },
     frame: true,
     autoHideMenuBar: true,
     icon: iconPath,
-    show: false
-  })
+    show: false,
+  });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
+    mainWindow.loadURL("http://localhost:5173");
+    mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
-  })
+  mainWindow.once("ready-to-show", () => {
+    mainWindow?.show();
+  });
 
   // Minimize to tray instead of closing
-  mainWindow.on('close', (event) => {
+  mainWindow.on("close", (event) => {
     if (!isQuitting) {
-      event.preventDefault()
-      mainWindow?.hide()
+      event.preventDefault();
+      mainWindow?.hide();
     }
-  })
+  });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null
-  })
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 }
 
 app.whenReady().then(() => {
-  settingsManager = new SettingsManager()
-  statisticsManager = new StatisticsManager()
-  blueLightFilterManager = new BlueLightFilterManager()
-  colorMaskManager = new ColorMaskManager()
-  monitorControlManager = new MonitorControlManager()
-  
-  createWindow()
-  
+  settingsManager = new SettingsManager();
+  statisticsManager = new StatisticsManager();
+  blueLightFilterManager = new BlueLightFilterManager();
+  colorMaskManager = new ColorMaskManager();
+  monitorControlManager = new MonitorControlManager();
+
+  createWindow();
+
   if (mainWindow) {
     timerManager = new TimerManager(
       mainWindow,
+      settingsManager,
       (duration) => statisticsManager.recordBreakTaken(duration),
-      (duration) => statisticsManager.recordBreakSkipped(duration)
-    )
-    trayManager = new TrayManager(mainWindow)
-    reminderManager = new ReminderManager()
+      (duration) => statisticsManager.recordBreakSkipped(duration),
+    );
+    trayManager = new TrayManager(mainWindow);
+    reminderManager = new ReminderManager(settingsManager);
     smartModeManager = new SmartModeManager(
       mainWindow,
       () => timerManager.pauseForMeeting(),
-      () => timerManager.resumeFromMeeting()
-    )
-    websiteBlockerManager = new WebsiteBlockerManager()
-    
+      () => timerManager.resumeFromMeeting(),
+    );
+    websiteBlockerManager = new WebsiteBlockerManager();
+
     // Create system tray
-    trayManager.createTray()
-    
+    trayManager.createTray();
+
     // Enable auto-launch by default -> toggled in settings
     autoLauncher.isEnabled().then((isEnabled: boolean) => {
       if (!isEnabled) {
-        autoLauncher.enable()
+        autoLauncher.enable();
       }
-    })
-    
+    });
+
     // Start screen time tracking (every minute, save every 5 minutes)
-    startScreenTimeTracking()
-    
+    startScreenTimeTracking();
+
     // Auto-start timer with saved settings after window is ready
-    mainWindow.webContents.once('did-finish-load', async () => {
+    mainWindow.webContents.once("did-finish-load", async () => {
       // Load saved settings or use defaults
-      const settings = settingsManager.getSettings()
-      
+      const settings = settingsManager.getSettings();
+
       // Apply blue light filter if enabled
       if (settings.blueLightFilter.enabled) {
-        await blueLightFilterManager.enable(settings.blueLightFilter.intensity)
+        await blueLightFilterManager.enable(settings.blueLightFilter.intensity);
       }
-      
+
       // Apply color mask if enabled
       if (settings.colorMask.enabled) {
         await colorMaskManager.enable(
           settings.colorMask.intensity,
           settings.colorMask.red,
           settings.colorMask.green,
-          settings.colorMask.blue
-        )
+          settings.colorMask.blue,
+        );
       }
-      
-      setTimeout(() => {
-        timerManager.start(settings.interval, settings.duration, settings.mode)
 
-        if (settings.mode === 'smart') {
-          smartModeManager.enable()
+      setTimeout(() => {
+        timerManager.start(settings.interval, settings.duration, settings.mode);
+
+        if (settings.mode === "smart") {
+          smartModeManager.enable();
         }
 
         // Apply whitelist
-        smartModeManager.setWhitelist(settings.smartModeWhitelist ?? [])
+        smartModeManager.setWhitelist(settings.smartModeWhitelist ?? []);
 
         // Restore focus mode if it was enabled
         if (settings.focusMode.enabled) {
-          websiteBlockerManager.enable(settings.focusMode.blockedDomains ?? [])
+          websiteBlockerManager.enable(settings.focusMode.blockedDomains ?? []);
         }
 
         // Apply saved reminder settings
-        reminderManager.configure('posture', {
+        reminderManager.configure("posture", {
           enabled: settings.postureReminder.enabled,
-          intervalMinutes: settings.postureReminder.interval
-        })
-        reminderManager.configure('hydration', {
+          intervalMinutes: settings.postureReminder.interval,
+        });
+        reminderManager.configure("hydration", {
           enabled: settings.hydrationReminder.enabled,
-          intervalMinutes: settings.hydrationReminder.interval
-        })
-      }, 2000) // Wait 2 seconds after loading screen
-    })
+          intervalMinutes: settings.hydrationReminder.interval,
+        });
+      }, 2000); // Wait 2 seconds after loading screen
+    });
   }
 
-  app.on('activate', () => {
+  app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+      createWindow();
     }
-  })
-})
+  });
+});
 
 // Quit when all windows are closed (except on macOS)
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
   }
-})
+});
 
 // Set quitting flag when app is about to quit
-app.on('before-quit', async () => {
-  isQuitting = true
+app.on("before-quit", async () => {
+  isQuitting = true;
   // Save statistics session end time
-  statisticsManager.onAppClose()
+  statisticsManager.onAppClose();
   // Stop screen time tracking
   if (screenTimeTracker) {
-    clearInterval(screenTimeTracker)
+    clearInterval(screenTimeTracker);
   }
   // Clean up blue light filter
-  await blueLightFilterManager.destroy()
+  await blueLightFilterManager.destroy();
   // Clean up color mask
-  await colorMaskManager.destroy()
+  await colorMaskManager.destroy();
   // Clean up reminders
-  reminderManager.destroy()
+  reminderManager.destroy();
   // Clean up smart mode
-  smartModeManager.destroy()
+  smartModeManager.destroy();
   // Clean up website blocker
-  await websiteBlockerManager.destroy()
-})
+  await websiteBlockerManager.destroy();
+});
 
 // Screen time tracking
-let activeMinutesBuffer = 0
-let lastSaveTime = Date.now()
+let activeMinutesBuffer = 0;
+let lastSaveTime = Date.now();
 
 function startScreenTimeTracking() {
   // Track active time every minute
   screenTimeTracker = setInterval(() => {
-    const idleTime = powerMonitor.getSystemIdleTime()
-    
+    const idleTime = powerMonitor.getSystemIdleTime();
+
     // If user was active in last minute (idle < 60 seconds)
     if (idleTime < 60) {
-      activeMinutesBuffer++
-      
+      activeMinutesBuffer++;
+
       // Save to storage every 5 minutes
-      const timeSinceLastSave = Date.now() - lastSaveTime
-      if (timeSinceLastSave >= 5 * 60 * 1000) { // 5 minutes
-        statisticsManager.addScreenTime(activeMinutesBuffer)
-        activeMinutesBuffer = 0
-        lastSaveTime = Date.now()
+      const timeSinceLastSave = Date.now() - lastSaveTime;
+      if (timeSinceLastSave >= 5 * 60 * 1000) {
+        // 5 minutes
+        statisticsManager.addScreenTime(activeMinutesBuffer);
+        activeMinutesBuffer = 0;
+        lastSaveTime = Date.now();
       }
     }
-  }, 60000) // Check every minute
-  
+  }, 60000); // Check every minute
+
   // Handle suspend (sleep/hibernate)
-  powerMonitor.on('suspend', () => {
+  powerMonitor.on("suspend", () => {
     // Save any buffered time before suspend
     if (activeMinutesBuffer > 0) {
-      statisticsManager.addScreenTime(activeMinutesBuffer)
-      activeMinutesBuffer = 0
-      lastSaveTime = Date.now()
+      statisticsManager.addScreenTime(activeMinutesBuffer);
+      activeMinutesBuffer = 0;
+      lastSaveTime = Date.now();
     }
-  })
-  
+  });
+
   // Handle resume
-  powerMonitor.on('resume', () => {
-    lastSaveTime = Date.now()
-  })
+  powerMonitor.on("resume", () => {
+    lastSaveTime = Date.now();
+  });
 }
 
 // IPC Handlers - Settings
-ipcMain.handle('get-settings', async () => {
-  return settingsManager.getSettings()
-})
+ipcMain.handle("get-settings", async () => {
+  return settingsManager.getSettings();
+});
 
-ipcMain.on('set-theme', (_, theme) => {
-  mainWindow?.webContents.send('theme-changed', theme)
-})
+// IPC: pick a sound file for alerts
+ipcMain.handle("pick-sound-file", async () => {
+  const result = await dialog.showOpenDialog(mainWindow!, {
+    properties: ["openFile"],
+    filters: [{ name: "Audio", extensions: ["mp3", "wav", "ogg", "m4a"] }],
+  });
+
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0)
+    return null;
+  return result.filePaths[0];
+});
+
+// IPC: update sound configuration in settings
+ipcMain.on("set-sound-config", (_, config) => {
+  const settings = settingsManager.getSettings();
+  settings.sounds = config;
+  settingsManager.saveSettings(settings);
+});
+
+ipcMain.on("set-theme", (_, theme) => {
+  mainWindow?.webContents.send("theme-changed", theme);
+});
 
 // IPC Handlers - Timer
-ipcMain.on('start-timer', (_, { interval, duration, mode }) => {
-  timerManager.start(interval, duration, mode)
+ipcMain.on("start-timer", (_, { interval, duration, mode }) => {
+  timerManager.start(interval, duration, mode);
   // Save settings when timer is started with new values
-  settingsManager.updateTimerSettings(interval, duration, mode)
-})
+  settingsManager.updateTimerSettings(interval, duration, mode);
+});
 
-ipcMain.on('stop-timer', () => {
-  timerManager.stop()
-})
+ipcMain.on("stop-timer", () => {
+  timerManager.stop();
+});
 
-ipcMain.on('pause-timer', () => {
-  timerManager.pause()
-})
+ipcMain.on("pause-timer", () => {
+  timerManager.pause();
+});
 
-ipcMain.on('resume-timer', () => {
-  timerManager.resume()
-})
+ipcMain.on("resume-timer", () => {
+  timerManager.resume();
+});
 
-ipcMain.on('skip-break', () => {
-  timerManager.skip()
-})
+ipcMain.on("skip-break", () => {
+  timerManager.skip();
+});
 
-ipcMain.handle('get-timer-status', () => {
-  return timerManager.getStatus()
-})
+ipcMain.handle("get-timer-status", () => {
+  return timerManager.getStatus();
+});
 
 // IPC Handler - Update tray with timer status
-ipcMain.on('update-tray-status', (_, status) => {
-  trayManager.updateTimerStatus(status)
-})
+ipcMain.on("update-tray-status", (_, status) => {
+  trayManager.updateTimerStatus(status);
+});
 
 // IPC Handlers - Auto-launch
-ipcMain.handle('get-auto-launch-status', async () => {
-  return await autoLauncher.isEnabled()
-})
+ipcMain.handle("get-auto-launch-status", async () => {
+  return await autoLauncher.isEnabled();
+});
 
-ipcMain.handle('enable-auto-launch', async () => {
+ipcMain.handle("enable-auto-launch", async () => {
   try {
-    await autoLauncher.enable()
-    return { success: true }
+    await autoLauncher.enable();
+    return { success: true };
   } catch (error) {
-    console.error('Failed to enable auto-launch:', error)
-    return { success: false, error }
+    console.error("Failed to enable auto-launch:", error);
+    return { success: false, error };
   }
-})
+});
 
-ipcMain.handle('disable-auto-launch', async () => {
+ipcMain.handle("disable-auto-launch", async () => {
   try {
-    await autoLauncher.disable()
-    return { success: true }
+    await autoLauncher.disable();
+    return { success: true };
   } catch (error) {
-    console.error('Failed to disable auto-launch:', error)
-    return { success: false, error }
+    console.error("Failed to disable auto-launch:", error);
+    return { success: false, error };
   }
-})
+});
 
 // IPC Handlers - Statistics
-ipcMain.handle('get-statistics', async () => {
-  return statisticsManager.getStatistics()
-})
+ipcMain.handle("get-statistics", async () => {
+  return statisticsManager.getStatistics();
+});
 
-ipcMain.handle('record-break-taken', async (_, duration: number) => {
-  statisticsManager.recordBreakTaken(duration)
-})
+ipcMain.handle("record-break-taken", async (_, duration: number) => {
+  statisticsManager.recordBreakTaken(duration);
+});
 
-ipcMain.handle('record-break-skipped', async (_, duration: number) => {
-  statisticsManager.recordBreakSkipped(duration)
-})
+ipcMain.handle("record-break-skipped", async (_, duration: number) => {
+  statisticsManager.recordBreakSkipped(duration);
+});
 
 // IPC Handlers - Blue Light Filter
-ipcMain.on('enable-blue-light-filter', async (_, intensity: number) => {
-  await blueLightFilterManager.enable(intensity)
+ipcMain.on("enable-blue-light-filter", async (_, intensity: number) => {
+  await blueLightFilterManager.enable(intensity);
   // Save to settings
-  const settings = settingsManager.getSettings()
-  settings.blueLightFilter.enabled = true
-  settings.blueLightFilter.intensity = intensity
-  settingsManager.saveSettings(settings)
-})
+  const settings = settingsManager.getSettings();
+  settings.blueLightFilter.enabled = true;
+  settings.blueLightFilter.intensity = intensity;
+  settingsManager.saveSettings(settings);
+});
 
-ipcMain.on('disable-blue-light-filter', async () => {
-  await blueLightFilterManager.disable()
+ipcMain.on("disable-blue-light-filter", async () => {
+  await blueLightFilterManager.disable();
   // Save to settings
-  const settings = settingsManager.getSettings()
-  settings.blueLightFilter.enabled = false
-  settingsManager.saveSettings(settings)
-})
+  const settings = settingsManager.getSettings();
+  settings.blueLightFilter.enabled = false;
+  settingsManager.saveSettings(settings);
+});
 
-ipcMain.on('update-blue-light-intensity', async (_, intensity: number) => {
-  await blueLightFilterManager.updateIntensity(intensity)
+ipcMain.on("update-blue-light-intensity", async (_, intensity: number) => {
+  await blueLightFilterManager.updateIntensity(intensity);
   // Save to settings
-  const settings = settingsManager.getSettings()
-  settings.blueLightFilter.intensity = intensity
-  settingsManager.saveSettings(settings)
-})
+  const settings = settingsManager.getSettings();
+  settings.blueLightFilter.intensity = intensity;
+  settingsManager.saveSettings(settings);
+});
 
 // IPC Handlers - Color Mask
-ipcMain.on('enable-color-mask', async (_, { intensity, red, green, blue }) => {
-  await colorMaskManager.enable(intensity, red, green, blue)
+ipcMain.on("enable-color-mask", async (_, { intensity, red, green, blue }) => {
+  await colorMaskManager.enable(intensity, red, green, blue);
   // Save to settings
-  const settings = settingsManager.getSettings()
-  settings.colorMask.enabled = true
-  settings.colorMask.intensity = intensity
-  settings.colorMask.red = red
-  settings.colorMask.green = green
-  settings.colorMask.blue = blue
-  settingsManager.saveSettings(settings)
-})
+  const settings = settingsManager.getSettings();
+  settings.colorMask.enabled = true;
+  settings.colorMask.intensity = intensity;
+  settings.colorMask.red = red;
+  settings.colorMask.green = green;
+  settings.colorMask.blue = blue;
+  settingsManager.saveSettings(settings);
+});
 
-ipcMain.on('disable-color-mask', async () => {
-  await colorMaskManager.disable()
+ipcMain.on("disable-color-mask", async () => {
+  await colorMaskManager.disable();
   // Save to settings
-  const settings = settingsManager.getSettings()
-  settings.colorMask.enabled = false
-  settingsManager.saveSettings(settings)
-})
+  const settings = settingsManager.getSettings();
+  settings.colorMask.enabled = false;
+  settingsManager.saveSettings(settings);
+});
 
-ipcMain.on('update-color-mask', async (_, { intensity, red, green, blue }) => {
-  await colorMaskManager.updateMask(intensity, red, green, blue)
+ipcMain.on("update-color-mask", async (_, { intensity, red, green, blue }) => {
+  await colorMaskManager.updateMask(intensity, red, green, blue);
   // Save to settings
-  const settings = settingsManager.getSettings()
-  settings.colorMask.intensity = intensity
-  settings.colorMask.red = red
-  settings.colorMask.green = green
-  settings.colorMask.blue = blue
-  settingsManager.saveSettings(settings)
-})
+  const settings = settingsManager.getSettings();
+  settings.colorMask.intensity = intensity;
+  settings.colorMask.red = red;
+  settings.colorMask.green = green;
+  settings.colorMask.blue = blue;
+  settingsManager.saveSettings(settings);
+});
 
 // IPC Handlers - Monitor Controls
-ipcMain.handle('set-monitor-brightness', async (_, value: number) => {
-  return await monitorControlManager.setBrightness(value)
-})
+ipcMain.handle("set-monitor-brightness", async (_, value: number) => {
+  return await monitorControlManager.setBrightness(value);
+});
 
-ipcMain.handle('set-monitor-contrast', async (_, value: number) => {
-  return await monitorControlManager.setContrast(value)
-})
+ipcMain.handle("set-monitor-contrast", async (_, value: number) => {
+  return await monitorControlManager.setContrast(value);
+});
 
-ipcMain.handle('get-monitor-brightness', async () => {
-  return await monitorControlManager.getBrightness()
-})
+ipcMain.handle("get-monitor-brightness", async () => {
+  return await monitorControlManager.getBrightness();
+});
 
 // IPC Handlers - Reminders
-ipcMain.on('set-reminder-config', (_, { type, enabled, intervalMinutes }) => {
-  reminderManager.configure(type, { enabled, intervalMinutes })
-  const settings = settingsManager.getSettings()
-  if (type === 'posture') {
-    settings.postureReminder.enabled = enabled
-    settings.postureReminder.interval = intervalMinutes
-  } else if (type === 'hydration') {
-    settings.hydrationReminder.enabled = enabled
-    settings.hydrationReminder.interval = intervalMinutes
+ipcMain.on("set-reminder-config", (_, { type, enabled, intervalMinutes }) => {
+  reminderManager.configure(type, { enabled, intervalMinutes });
+  const settings = settingsManager.getSettings();
+  if (type === "posture") {
+    settings.postureReminder.enabled = enabled;
+    settings.postureReminder.interval = intervalMinutes;
+  } else if (type === "hydration") {
+    settings.hydrationReminder.enabled = enabled;
+    settings.hydrationReminder.interval = intervalMinutes;
   }
-  settingsManager.saveSettings(settings)
-})
+  settingsManager.saveSettings(settings);
+});
 
-ipcMain.on('snooze-reminder', (_, { type, minutes }) => {
-  reminderManager.snooze(type, minutes)
-})
+ipcMain.on("snooze-reminder", (_, { type, minutes }) => {
+  reminderManager.snooze(type, minutes);
+});
 
 // IPC Handlers - Smart Mode
-ipcMain.on('set-smart-mode', (_, enabled: boolean) => {
+ipcMain.on("set-smart-mode", (_, enabled: boolean) => {
   if (enabled) {
-    smartModeManager.enable()
+    smartModeManager.enable();
   } else {
-    smartModeManager.disable()
+    smartModeManager.disable();
   }
-  const settings = settingsManager.getSettings()
-  settings.mode = enabled ? 'smart' : 'hard'
-  settingsManager.saveSettings(settings)
-})
+  const settings = settingsManager.getSettings();
+  settings.mode = enabled ? "smart" : "hard";
+  settingsManager.saveSettings(settings);
+});
 
-ipcMain.on('set-manual-meeting', (_, inMeeting: boolean) => {
-  smartModeManager.setManualMeeting(inMeeting)
-})
+ipcMain.on("set-manual-meeting", (_, inMeeting: boolean) => {
+  smartModeManager.setManualMeeting(inMeeting);
+});
 
-ipcMain.handle('get-smart-mode-status', () => {
-  return smartModeManager.getStatus()
-})
+ipcMain.handle("get-smart-mode-status", () => {
+  return smartModeManager.getStatus();
+});
 
-ipcMain.on('set-smart-mode-whitelist', (_, list: string[]) => {
-  smartModeManager.setWhitelist(list)
-  const settings = settingsManager.getSettings()
-  settings.smartModeWhitelist = list
-  settingsManager.saveSettings(settings)
-})
+ipcMain.on("set-smart-mode-whitelist", (_, list: string[]) => {
+  smartModeManager.setWhitelist(list);
+  const settings = settingsManager.getSettings();
+  settings.smartModeWhitelist = list;
+  settingsManager.saveSettings(settings);
+});
 
-ipcMain.handle('get-smart-mode-whitelist', () => {
-  return smartModeManager.getWhitelist()
-})
+ipcMain.handle("get-smart-mode-whitelist", () => {
+  return smartModeManager.getWhitelist();
+});
 
 // IPC Handlers - Focus Mode / Website Blocker
-ipcMain.handle('set-focus-mode', async (_, enabled: boolean) => {
-  const settings = settingsManager.getSettings()
-  settings.focusMode.enabled = enabled
-  settingsManager.saveSettings(settings)
+ipcMain.handle("set-focus-mode", async (_, enabled: boolean) => {
+  const settings = settingsManager.getSettings();
+  settings.focusMode.enabled = enabled;
+  settingsManager.saveSettings(settings);
 
   if (enabled) {
-    return websiteBlockerManager.enable(settings.focusMode.blockedDomains ?? [])
+    return websiteBlockerManager.enable(
+      settings.focusMode.blockedDomains ?? [],
+    );
   } else {
-    return websiteBlockerManager.disable()
+    return websiteBlockerManager.disable();
   }
-})
+});
 
-ipcMain.handle('set-blocked-domains', async (_, domains: string[]) => {
-  const settings = settingsManager.getSettings()
-  settings.focusMode.blockedDomains = domains
-  settingsManager.saveSettings(settings)
-  return websiteBlockerManager.setDomains(domains)
-})
+ipcMain.handle("set-blocked-domains", async (_, domains: string[]) => {
+  const settings = settingsManager.getSettings();
+  settings.focusMode.blockedDomains = domains;
+  settingsManager.saveSettings(settings);
+  return websiteBlockerManager.setDomains(domains);
+});
 
-ipcMain.handle('get-blocked-domains', () => {
-  const settings = settingsManager.getSettings()
-  return settings.focusMode.blockedDomains ?? []
-})
+ipcMain.handle("get-blocked-domains", () => {
+  const settings = settingsManager.getSettings();
+  return settings.focusMode.blockedDomains ?? [];
+});
 
-ipcMain.handle('get-focus-mode-status', () => {
-  return websiteBlockerManager.isEnabled()
-})
+ipcMain.handle("get-focus-mode-status", () => {
+  return websiteBlockerManager.isEnabled();
+});
 
-ipcMain.handle('get-hosts-write-access', () => {
-  return websiteBlockerManager.hasWriteAccess()
-})
+ipcMain.handle("get-hosts-write-access", () => {
+  return websiteBlockerManager.hasWriteAccess();
+});

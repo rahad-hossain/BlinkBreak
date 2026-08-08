@@ -1,148 +1,232 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BlinkBreak - Take a Break</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    html, body {
-      width: 100%;
-      height: 100%;
-      background-color: #000000 !important;
-      color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow: hidden;
-      cursor: none;
-    }
-    
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .container {
-      text-align: center;
-      padding: 2rem;
-      max-width: 800px;
-    }
-    
-    .icon {
-      font-size: 6rem;
-      margin-bottom: 2rem;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: 0.8; }
-    }
-    
-    h1 {
-      font-size: 4rem;
-      font-weight: bold;
-      color: #4db8a8;
-      margin-bottom: 1rem;
-    }
-    
-    .subtitle {
-      font-size: 2rem;
-      color: #a0a0a0;
-      margin-bottom: 3rem;
-    }
-    
-    .timer {
-      font-size: 8rem;
-      font-weight: bold;
-      color: #4db8a8;
-      font-family: 'Courier New', monospace;
-      margin: 3rem 0;
-      text-shadow: 0 0 20px rgba(77, 184, 168, 0.5);
-    }
-    
-    .tips {
-      margin-top: 3rem;
-      font-size: 1.5rem;
-      color: #a0a0a0;
-      line-height: 2.5;
-    }
-    
-    .tip {
-      margin: 1rem 0;
-    }
-    
-    .footer {
-      margin-top: 3rem;
-      font-size: 1rem;
-      color: #666;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="icon">👁️</div>
-    <h1>Time for a Break!</h1>
-    <p class="subtitle">Rest your eyes and relax</p>
-    
-    <div class="timer" id="timer">00:20</div>
-    
-    <div class="tips">
-      <div class="tip">👀 Look at something 20 feet away</div>
-      <div class="tip">😌 Blink slowly and relax your eyes</div>
-      <div class="tip">🧘 Take deep breaths</div>
-    </div>
-    
-    <div class="footer">Hard Mode - Screen locked until break completes</div>
-  </div>
-  
-  <script>
-    // Ensure black background
-    document.body.style.backgroundColor = '#000000';
-    document.documentElement.style.backgroundColor = '#000000';
-    
-    // Get duration from URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const duration = parseInt(urlParams.get('duration')) || 20;
-    let timeLeft = duration;
-    
-    const timerElement = document.getElementById('timer');
-    
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    
-    function updateTimer() {
-      timerElement.textContent = formatTime(timeLeft);
-      
-      if (timeLeft > 0) {
-        timeLeft--;
-        setTimeout(updateTimer, 1000);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlinkBreak - Take a Break</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-    }
-    
-    // Start timer
-    updateTimer();
-    
-    // Prevent all keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    });
-    
-    // Prevent context menu
-    document.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      return false;
-    });
-  </script>
-</body>
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%) !important;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        overflow: hidden;
+        cursor: none;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .container {
+        text-align: center;
+        padding: 2rem;
+        max-width: 900px;
+        animation: fadeIn 0.8s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .glow-circle {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 3rem;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(77, 184, 168, 0.3), rgba(77, 184, 168, 0.05));
+        border: 2px solid rgba(77, 184, 168, 0.4);
+        animation: breathe 4s ease-in-out infinite;
+      }
+
+      @keyframes breathe {
+        0%, 100% {
+          transform: scale(1);
+          box-shadow: 0 0 20px rgba(77, 184, 168, 0.2);
+        }
+        50% {
+          transform: scale(1.05);
+          box-shadow: 0 0 40px rgba(77, 184, 168, 0.4);
+        }
+      }
+
+      h1 {
+        font-size: 3.5rem;
+        font-weight: 300;
+        letter-spacing: -1px;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        line-height: 1.2;
+      }
+
+      .subtitle {
+        font-size: 1.25rem;
+        font-weight: 400;
+        color: #9ca3af;
+        margin-bottom: 3rem;
+        letter-spacing: 0.5px;
+      }
+
+      .timer {
+        font-size: 9rem;
+        font-weight: 200;
+        color: #4db8a8;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+        margin: 2rem 0 1rem 0;
+        text-shadow: 0 0 30px rgba(77, 184, 168, 0.3);
+        letter-spacing: -2px;
+      }
+
+      .timer-label {
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #6b7280;
+        margin-bottom: 3rem;
+      }
+
+      .tips {
+        margin-top: 3rem;
+        font-size: 1.125rem;
+        color: #d1d5db;
+        line-height: 1.8;
+      }
+
+      .tip {
+        margin: 1.5rem 0;
+        opacity: 0.9;
+        transition: opacity 0.3s ease;
+      }
+
+      .tip:hover {
+        opacity: 1;
+      }
+
+      .footer {
+        margin-top: 4rem;
+        font-size: 0.875rem;
+        color: #4b5563;
+        letter-spacing: 0.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="glow-circle"></div>
+      
+      <h1>Pause & Refresh</h1>
+      <p class="subtitle">Give your eyes a moment to rest</p>
+
+      <div class="timer" id="timer">00:20</div>
+      <div class="timer-label">Remaining</div>
+
+      <div class="tips">
+        <div class="tip">Look away from your screen at something in the distance</div>
+        <div class="tip">Breathe slowly and deeply for a moment</div>
+        <div class="tip">Move your body gently to release tension</div>
+      </div>
+
+      <div class="footer">Hard Mode — Screen will unlock when break ends</div>
+    </div>
+
+    <script>
+      // Ensure dark gradient background
+      document.body.style.background = "linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%)";
+      document.documentElement.style.background = "linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%)";
+
+      // Get duration from URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const duration = parseInt(urlParams.get("duration")) || 20;
+      let timeLeft = duration;
+
+      const timerElement = document.getElementById("timer");
+
+      function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+      }
+
+      function updateTimer() {
+        timerElement.textContent = formatTime(timeLeft);
+
+        if (timeLeft > 0) {
+          timeLeft--;
+          setTimeout(updateTimer, 1000);
+        }
+      }
+
+      // Start timer
+      updateTimer();
+
+      // Play sound for break start (custom or default)
+      const params = new URLSearchParams(window.location.search);
+      const soundParam = params.get("sound") || "";
+
+      function playBeepTone() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = "sine";
+          o.frequency.value = 440;
+          g.gain.value = 0.05;
+          o.connect(g);
+          g.connect(ctx.destination);
+          o.start();
+          setTimeout(() => {
+            o.stop();
+            ctx.close();
+          }, 500);
+        } catch (e) {
+          console.log("beep failed", e);
+        }
+      }
+
+      function playSound(path) {
+        if (!path) return playBeepTone();
+        try {
+          const audio = new Audio(
+            path.startsWith("file:") ? path : `file://${path}`,
+          );
+          audio.volume = 0.8;
+          audio.play().catch(() => playBeepTone());
+        } catch (e) {
+          playBeepTone();
+        }
+      }
+
+      playSound(decodeURIComponent(soundParam || ""));
+
+      // Prevent all keyboard shortcuts
+      document.addEventListener("keydown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      });
+
+      // Prevent context menu
+      document.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        return false;
+      });
+    </script>
+  </body>
 </html>

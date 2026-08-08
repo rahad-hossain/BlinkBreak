@@ -1,162 +1,225 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reminder</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reminder</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-    body {
-      width: 400px;
-      height: 220px;
-      background: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow: hidden;
-    }
+      body {
+        width: 400px;
+        height: 220px;
+        background: transparent;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        overflow: hidden;
+      }
 
-    .popup {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
-      border: 2px solid #4db8a8;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      padding: 1.25rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      animation: slideIn 0.3s ease-out;
-    }
+      .popup {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+        border: 2px solid #4db8a8;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        animation: slideIn 0.3s ease-out;
+      }
 
-    @keyframes slideIn {
-      from { transform: translateY(20px); opacity: 0; }
-      to   { transform: translateY(0);   opacity: 1; }
-    }
+      @keyframes slideIn {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
 
-    .header {
-      display: flex;
-      align-items: flex-start;
-      gap: 1rem;
-    }
+      .header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+      }
 
-    .icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+      .icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+        line-height: 1;
+      }
 
-    .content { flex: 1; }
+      .content {
+        flex: 1;
+      }
 
-    h3 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 0.3rem;
-    }
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.3rem;
+      }
 
-    .description {
-      font-size: 0.8rem;
-      color: #a0a0a0;
-      line-height: 1.5;
-    }
+      .description {
+        font-size: 0.8rem;
+        color: #a0a0a0;
+        line-height: 1.5;
+      }
 
-    .snooze-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      color: #a0a0a0;
-    }
+      .snooze-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: #a0a0a0;
+      }
 
-    .snooze-row select {
-      background: #3a3a3a;
-      color: #e0e0e0;
-      border: 1px solid #555;
-      border-radius: 6px;
-      padding: 0.2rem 0.4rem;
-      font-size: 0.75rem;
-      cursor: pointer;
-      outline: none;
-    }
+      .snooze-row select {
+        background: #3a3a3a;
+        color: #e0e0e0;
+        border: 1px solid #555;
+        border-radius: 6px;
+        padding: 0.2rem 0.4rem;
+        font-size: 0.75rem;
+        cursor: pointer;
+        outline: none;
+      }
 
-    .buttons {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: auto;
-    }
+      .buttons {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: auto;
+      }
 
-    button {
-      flex: 1;
-      padding: 0.6rem 1rem;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
+      button {
+        flex: 1;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
 
-    .snooze-btn {
-      background: #3a3a3a;
-      color: #e0e0e0;
-    }
-    .snooze-btn:hover { background: #4a4a4a; }
+      .snooze-btn {
+        background: #3a3a3a;
+        color: #e0e0e0;
+      }
+      .snooze-btn:hover {
+        background: #4a4a4a;
+      }
 
-    .dismiss-btn {
-      background: #4db8a8;
-      color: #1e1e1e;
-    }
-    .dismiss-btn:hover { background: #5cc9b8; transform: translateY(-1px); }
-  </style>
-</head>
-<body>
-  <div class="popup">
-    <div class="header">
-      <div class="icon" id="icon">🧘</div>
-      <div class="content">
-        <h3 id="title">Posture Check</h3>
-        <p class="description" id="body">Sit up straight, relax your shoulders, and align your screen at eye level.</p>
+      .dismiss-btn {
+        background: #4db8a8;
+        color: #1e1e1e;
+      }
+      .dismiss-btn:hover {
+        background: #5cc9b8;
+        transform: translateY(-1px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="popup">
+      <div class="header">
+        <div class="icon" id="icon">🧘</div>
+        <div class="content">
+          <h3 id="title">Posture Check</h3>
+          <p class="description" id="body">
+            Sit up straight, relax your shoulders, and align your screen at eye
+            level.
+          </p>
+        </div>
+      </div>
+
+      <div class="snooze-row">
+        Snooze for
+        <select id="snoozeSelect">
+          <option value="5">5 min</option>
+          <option value="10" selected>10 min</option>
+          <option value="15">15 min</option>
+          <option value="30">30 min</option>
+        </select>
+      </div>
+
+      <div class="buttons">
+        <button class="snooze-btn" onclick="snooze()">Snooze</button>
+        <button class="dismiss-btn" onclick="dismiss()">Got it</button>
       </div>
     </div>
 
-    <div class="snooze-row">
-      Snooze for
-      <select id="snoozeSelect">
-        <option value="5">5 min</option>
-        <option value="10" selected>10 min</option>
-        <option value="15">15 min</option>
-        <option value="30">30 min</option>
-      </select>
-    </div>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const type = params.get("type") || "posture";
+      const title = params.get("title") || "Reminder";
+      const body = params.get("body") || "";
+      const soundParam = params.get("sound") || "";
 
-    <div class="buttons">
-      <button class="snooze-btn" onclick="snooze()">Snooze</button>
-      <button class="dismiss-btn" onclick="dismiss()">Got it</button>
-    </div>
-  </div>
-
-  <script>
-    const params = new URLSearchParams(window.location.search)
-    const type = params.get('type') || 'posture'
-    const title = params.get('title') || 'Reminder'
-    const body = params.get('body') || ''
-
-    document.getElementById('title').textContent = title
-    document.getElementById('body').textContent = body
-    document.getElementById('icon').textContent = type === 'hydration' ? '💧' : '🧘'
-
-    function dismiss() {
-      window.close()
-    }
-
-    function snooze() {
-      const minutes = parseInt(document.getElementById('snoozeSelect').value)
-      // Notify main process to reschedule a one-time snooze
-      if (window.electronAPI) {
-        window.electronAPI.snoozeReminder(type, minutes)
+      function playBeepTone() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = "sine";
+          o.frequency.value = 880;
+          g.gain.value = 0.05;
+          o.connect(g);
+          g.connect(ctx.destination);
+          o.start();
+          setTimeout(() => {
+            o.stop();
+            ctx.close();
+          }, 300);
+        } catch (e) {
+          console.log("beep failed", e);
+        }
       }
-      window.close()
-    }
 
-    // Auto-dismiss after 30 seconds if no action
-    setTimeout(() => window.close(), 30000)
-  </script>
-</body>
+      function playSound(path) {
+        if (!path) return playBeepTone();
+        try {
+          const audio = new Audio(
+            path.startsWith("file:") ? path : `file://${path}`,
+          );
+          audio.volume = 0.8;
+          audio.play().catch(() => playBeepTone());
+        } catch (e) {
+          playBeepTone();
+        }
+      }
+
+      document.getElementById("title").textContent = title;
+      document.getElementById("body").textContent = body;
+      document.getElementById("icon").textContent =
+        type === "hydration" ? "💧" : "🧘";
+
+      // Play custom sound if provided, otherwise default beep
+      playSound(decodeURIComponent(soundParam || ""));
+
+      function dismiss() {
+        window.close();
+      }
+
+      function snooze() {
+        const minutes = parseInt(document.getElementById("snoozeSelect").value);
+        // Notify main process to reschedule a one-time snooze
+        if (window.electronAPI) {
+          window.electronAPI.snoozeReminder(type, minutes);
+        }
+        window.close();
+      }
+
+      // Auto-dismiss after 30 seconds if no action
+      setTimeout(() => window.close(), 30000);
+    </script>
+  </body>
 </html>

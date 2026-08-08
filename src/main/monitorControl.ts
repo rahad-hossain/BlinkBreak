@@ -42,16 +42,16 @@ export class MonitorControlManager {
       const scriptPath = isDev
         ? require('path').join(__dirname, '../../helpers/SetAllMonitorsBrightness.ps1')
         : require('path').join(process.resourcesPath, 'helpers/SetAllMonitorsBrightness.ps1')
-      
+
       const { stdout } = await execAsync(
         `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -Brightness ${value}`,
         { timeout: 5000 }
       )
-      
+
       const lines = stdout.trim().split('\n')
       console.log(`[MonitorControl] Brightness control:`)
       lines.forEach(line => console.log(`[MonitorControl]   ${line.trim()}`))
-      
+
       const successLine = lines.find(l => l.includes('SUCCESS:'))
       return !!successLine
     } catch (error: any) {
@@ -70,15 +70,15 @@ export class MonitorControlManager {
       const scriptPath = isDev
         ? require('path').join(__dirname, '../../helpers/set-brightness-linux.sh')
         : require('path').join(process.resourcesPath, 'helpers/set-brightness-linux.sh')
-      
-      await execAsync(`chmod +x "${scriptPath}"`, { timeout: 1000 }).catch(() => {})
-      
+
+      await execAsync(`chmod +x "${scriptPath}"`, { timeout: 1000 }).catch(() => { })
+
       const { stdout } = await execAsync(`bash "${scriptPath}" ${value}`, { timeout: 5000 })
-      
+
       const lines = stdout.trim().split('\n')
       console.log(`[MonitorControl] Linux brightness control:`)
       lines.forEach(line => console.log(`[MonitorControl]   ${line.trim()}`))
-      
+
       const successLine = lines.find(l => l.includes('SUCCESS:'))
       return !!successLine
     } catch (error: any) {
@@ -139,8 +139,15 @@ export class MonitorControlManager {
           }
         }
       `.replace(/\s+/g, ' ').trim()
-      
-      await execAsync(`powershell -NoProfile -Command "${script}"`, { timeout: 3000 })
+
+      const { stdout } = await execAsync(`powershell -NoProfile -Command "${script}"`, { timeout: 3000 })
+      const output = stdout.toString().toLowerCase()
+
+      if (output.includes('contrast not supported') || output.includes('not supported')) {
+        console.log('[MonitorControl] Windows contrast not supported - use monitor OSD buttons')
+        return false
+      }
+
       console.log(`[MonitorControl] Windows contrast set to ${value}%`)
       return true
     } catch (error) {
@@ -156,11 +163,11 @@ export class MonitorControlManager {
   private async setContrastLinux(value: number): Promise<boolean> {
     try {
       await execAsync('command -v ddcutil', { timeout: 1000 })
-      
+
       const { stdout } = await execAsync('ddcutil detect --brief', { timeout: 3000 })
       const lines = stdout.trim().split('\n')
       let success = false
-      
+
       for (const line of lines) {
         if (line.startsWith('Display')) {
           const displayNum = line.match(/Display (\d+)/)?.[1]
@@ -175,11 +182,11 @@ export class MonitorControlManager {
           }
         }
       }
-      
+
       if (!success) {
         console.log('[MonitorControl] No DDC/CI monitors found for contrast control')
       }
-      
+
       return success
     } catch (error) {
       console.log('[MonitorControl] ddcutil not available - contrast control requires ddcutil')
@@ -194,7 +201,7 @@ export class MonitorControlManager {
     } else if (this.platform === 'linux') {
       return await this.getBrightnessLinux()
     }
-    
+
     return this.currentBrightness
   }
 
@@ -203,7 +210,7 @@ export class MonitorControlManager {
       const script = `(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightness | Select-Object -First 1).CurrentBrightness`
       const { stdout } = await execAsync(`powershell -NoProfile -Command "${script}"`, { timeout: 3000 })
       const brightness = parseInt(stdout.trim())
-      
+
       if (!isNaN(brightness)) {
         this.currentBrightness = brightness
         return brightness
@@ -211,7 +218,7 @@ export class MonitorControlManager {
     } catch (error) {
       console.log('[MonitorControl] Failed to get Windows brightness')
     }
-    
+
     return this.currentBrightness
   }
 
@@ -219,14 +226,14 @@ export class MonitorControlManager {
     try {
       const { stdout: backlights } = await execAsync('ls /sys/class/backlight/', { timeout: 1000 })
       const backlight = backlights.trim().split('\n')[0]
-      
+
       if (backlight) {
         const { stdout: currentStr } = await execAsync(`cat /sys/class/backlight/${backlight}/brightness`, { timeout: 1000 })
         const { stdout: maxStr } = await execAsync(`cat /sys/class/backlight/${backlight}/max_brightness`, { timeout: 1000 })
-        
+
         const current = parseInt(currentStr.trim())
         const max = parseInt(maxStr.trim())
-        
+
         if (!isNaN(current) && !isNaN(max)) {
           this.currentBrightness = Math.round((current / max) * 100)
           return this.currentBrightness
@@ -235,7 +242,7 @@ export class MonitorControlManager {
     } catch (error) {
       console.log('[MonitorControl] Failed to get Linux brightness')
     }
-    
+
     return this.currentBrightness
   }
 
