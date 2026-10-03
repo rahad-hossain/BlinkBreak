@@ -94,9 +94,7 @@ export class BreakWindowManager {
 
   showSoftModeBreak(duration: number) {
     // Close existing soft mode window if any
-    if (this.softModeWindow && !this.softModeWindow.isDestroyed()) {
-      this.softModeWindow.close();
-    }
+    this.closeSoftModeWindow();
 
     // Get primary display
     const primaryDisplay = screen.getPrimaryDisplay();
@@ -116,6 +114,9 @@ export class BreakWindowManager {
       minimizable: false,
       maximizable: false,
       transparent: true,
+      hasShadow: false,
+      backgroundColor: "#00000000",
+      focusable: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -126,6 +127,11 @@ export class BreakWindowManager {
     this.softModeWindow.setMenu(null);
     this.softModeWindow.setAlwaysOnTop(true, "floating", 1);
     this.softModeWindow.setVisibleOnAllWorkspaces(true);
+    this.softModeWindow.on("closed", () => {
+      if (this.softModeWindow && this.softModeWindow.isDestroyed()) {
+        this.softModeWindow = null;
+      }
+    });
 
     // Load the soft break screen with optional sound
     const htmlPath = path.join(__dirname, "../renderer/softBreak.html");
@@ -150,8 +156,19 @@ export class BreakWindowManager {
   }
 
   closeSoftModeWindow() {
-    if (this.softModeWindow && !this.softModeWindow.isDestroyed()) {
-      this.softModeWindow.close();
+    const window = this.softModeWindow;
+    if (!window || window.isDestroyed()) {
+      this.softModeWindow = null;
+      return;
+    }
+
+    try {
+      window.removeAllListeners("closed");
+      window.close();
+      if (!window.isDestroyed()) {
+        window.destroy();
+      }
+    } finally {
       this.softModeWindow = null;
     }
   }

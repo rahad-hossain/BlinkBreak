@@ -107,6 +107,9 @@ export class ReminderManager {
       resizable: false,
       movable: false,
       transparent: true,
+      hasShadow: false,
+      backgroundColor: "#00000000",
+      focusable: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -129,7 +132,9 @@ export class ReminderManager {
       query: { type, title, body, sound: soundPath ?? "" },
     });
 
-    win.on("closed", () => this.popups.delete(type));
+    win.on("closed", () => {
+      this.popups.delete(type);
+    });
     this.popups.set(type, win);
 
     // As a fallback, play a short beep from main process
@@ -149,7 +154,10 @@ export class ReminderManager {
     this.snoozeTimers.forEach((t) => clearTimeout(t));
     this.snoozeTimers.clear();
     this.popups.forEach((win) => {
-      if (!win.isDestroyed()) win.close();
+      if (!win.isDestroyed()) {
+        win.close();
+        win.destroy();
+      }
     });
     this.popups.clear();
   }
