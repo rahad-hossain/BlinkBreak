@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/rahad-hossain/BlinkBreak/releases/latest">
-    <img src="https://img.shields.io/badge/version-1.2.0-3daa8f" alt="Version 1.2.0">
+    <img src="https://img.shields.io/badge/version-2.0.0-3daa8f" alt="Version 2.0.0">
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-3daa8f" alt="Windows">
   <img src="https://img.shields.io/badge/license-MIT-3daa8f" alt="MIT License">
@@ -33,6 +33,11 @@ BlinkBreak is a cross-platform desktop application built with Electron that help
 <p align="center">
   <img src="public/sample-home.png" alt="Home page overview" width="45%">
   <img src="public/sample-timer.png" alt="Timer page with break controls" width="45%">
+</p>
+
+<p align="center">
+  <img src="public/plugin-desktop.png" alt="Dynamic Desktop plugin with the GitHub widget" width="45%">
+  <img src="public/plugin-taskbar.png" alt="Taskbar customization plugin" width="45%">
 </p>
 
 <p align="center">
@@ -59,10 +64,12 @@ BlinkBreak is a cross-platform desktop application built with Electron that help
 - ✓ **Settings Persistence** - Your preferences stay intact across restarts
 - ✓ **Statistics Tracking** - Review screen time, streaks, and daily progress
 - ✓ **Health Reminders** - Posture and hydration prompts with custom sounds
-- ✓ **Monitor Controls** - Adjust brightness, contrast, and display presets
+- ✓ **Monitor Controls** - Adjust brightness, contrast, and display presets, including Extra Dim below the hardware minimum
 - ✓ **Blue Light Filter** - Warm-screen comfort for longer work sessions
 - ✓ **Color Mask** - Apply soft color overlays to reduce visual fatigue
 - ✓ **Focus Mode** - Block distracting websites system-wide
+- ✓ **Taskbar Plugin** - Restyle the Windows 11 taskbar (clear, blur, acrylic or solid) with an adaptive dock layout and icon size
+- ✓ **Dynamic Desktop Plugin** - GitHub desktop widget with repositories, pull requests, reviews, branches and commits across multiple accounts
 - ✓ **Dual Themes** - Modern dark and light experiences
 - ✓ **Single Instance** - Prevents duplicate app windows
 
@@ -74,17 +81,17 @@ BlinkBreak is a cross-platform desktop application built with Electron that help
 
 ## Download
 
-**Latest Release:** [v1.2.0](https://github.com/rahad-hossain/BlinkBreak/releases/latest)
+**Latest Release:** [v2.0.0](https://github.com/rahad-hossain/BlinkBreak/releases/latest)
 
-**Installer (Recommended):** `BlinkBreak Setup 1.2.0.exe`
+**Installer (Recommended):** `BlinkBreak Setup 2.0.0.exe`
 
 - Installs to Program Files with shortcuts
 
-**Portable:** `BlinkBreak 1.2.0.exe`
+**Portable:** `BlinkBreak 2.0.0.exe`
 
 - No installation required
 
-**Requirements:** Windows 10/11 (64-bit)
+**Requirements:** Windows 10/11 (64-bit); the Taskbar plugin requires Windows 11
 
 ---
 
@@ -108,6 +115,9 @@ cd BlinkBreak
 # Install dependencies
 npm install
 
+# Build the native taskbar engine (requires Visual Studio C++ Build Tools)
+native\taskbar\build.cmd
+
 # Run in development
 npm run dev
 
@@ -126,6 +136,7 @@ npm run build:electron
 - **TailwindCSS** - Styling
 - **Zustand** - State management
 - **electron-store** - Data persistence
+- **C++/WinRT** - Native taskbar engine
 
 ---
 
@@ -140,6 +151,7 @@ BlinkBreak/
 │   ├── renderer/       # React application
 │   ├── preload/        # Preload script for IPC
 │   └── shared/         # Shared types and utilities
+├── native/             # Native taskbar engine
 ├── public/             # Static assets
 └── dist/               # Build output
 ```
@@ -157,7 +169,7 @@ npm run lint            # Run ESLint
 
 ## Design Principles
 
-BlinkBreak is designed with eye health as the primary focus. The color scheme uses warm tones to reduce blue light exposure, maintains high contrast without harsh whites, and implements reduced saturation to prevent eye fatigue. The interface is minimal and intuitive, with smooth animations that respect user accessibility preferences. All user data is stored locally with no telemetry or external server communication.
+BlinkBreak is designed with eye health as the primary focus. The color scheme uses warm tones to reduce blue light exposure, maintains high contrast without harsh whites, and implements reduced saturation to prevent eye fatigue. The interface is minimal and intuitive, with smooth animations that respect user accessibility preferences. All user data is stored locally with no telemetry; the only network access is the optional GitHub widget, which signs in on github.com and contacts only GitHub.
 
 ---
 

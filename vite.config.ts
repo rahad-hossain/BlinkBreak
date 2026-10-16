@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
-import { copyFileSync, mkdirSync } from 'fs'
+import { copyFileSync, mkdirSync, readFileSync } from 'fs'
+
+const { version } = JSON.parse(readFileSync('./package.json', 'utf8'))
 
 export default defineConfig({
   plugins: [
@@ -14,6 +16,7 @@ export default defineConfig({
           mkdirSync('dist/renderer', { recursive: true })
           copyFileSync('src/renderer/hardBreak.html', 'dist/renderer/hardBreak.html')
           copyFileSync('src/renderer/softBreak.html', 'dist/renderer/softBreak.html')
+          copyFileSync('src/renderer/widget.html', 'dist/renderer/widget.html')
           console.log('✓ Break screen HTML files copied to dist')
         } catch (err) {
           console.error('Error copying break screen files:', err)
@@ -21,6 +24,9 @@ export default defineConfig({
       }
     }
   ],
+  define: {
+    __APP_VERSION__: JSON.stringify(version)
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

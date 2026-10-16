@@ -1,6 +1,6 @@
 {
   "name": "blinkbreak",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Cross-platform desktop app for eye strain relief",
   "main": "dist/main/index.js",
   "author": "BlinkBreak",
@@ -23,6 +23,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "electron-store": "^8.1.0",
+    "koffi": "^3.3.3",
     "lucide-react": "^0.344.0",
     "ps-list": "^7.2.0",
     "react": "^18.2.0",

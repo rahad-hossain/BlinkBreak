@@ -1,6 +1,7 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as os from 'os'
+import { BrowserWindow, screen } from 'electron'
 
 const execAsync = promisify(exec)
 
@@ -12,13 +13,74 @@ export class MonitorControlManager {
   private currentBrightness: number = 100
   private currentContrast: number = 100
   private platform: string = os.platform()
+  private dimWindows: BrowserWindow[] = []
 
   constructor() {
     console.log(`[MonitorControl] Platform: ${this.platform}`)
   }
 
+  /**
+   * Values below 0 extend past the hardware minimum: the monitor stays at 0
+   * and a click-through overlay darkens every display by |value| percent.
+   */
   async setBrightness(value: number): Promise<boolean> {
+    this.setDimOverlay(value < 0 ? Math.min(-value, 90) : 0)
+    if (value < 0) {
+      const wasHardwareZero = this.currentBrightness <= 0
+      this.currentBrightness = value
+      return wasHardwareZero ? true : await this.setHardwareBrightness(0)
+    }
     this.currentBrightness = value
+    return await this.setHardwareBrightness(value)
+  }
+
+  private setDimOverlay(percent: number) {
+    if (percent <= 0) {
+      this.dimWindows.forEach(w => {
+        if (!w.isDestroyed()) {
+          w.hide()
+          w.destroy()
+        }
+      })
+      this.dimWindows = []
+      return
+    }
+
+    const html = (o: number) =>
+      `data:text/html,<html style="height:100%25"><body style="margin:0;height:100%25;background:rgba(0,0,0,${o})"></body></html>`
+
+    if (this.dimWindows.length) {
+      this.dimWindows.forEach(w => !w.isDestroyed() && w.loadURL(html(percent / 100)))
+      return
+    }
+
+    this.dimWindows = screen.getAllDisplays().map(display => {
+      const win = new BrowserWindow({
+        ...display.bounds,
+        frame: false,
+        transparent: true,
+        backgroundColor: '#00000000',
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        focusable: false,
+        resizable: false,
+        movable: false,
+        hasShadow: false,
+        enableLargerThanScreen: true,
+        webPreferences: { nodeIntegration: false, contextIsolation: true }
+      })
+      // With mixed display scaling the initial size uses the primary display's
+      // scale factor, so apply the bounds again once the window is on its display.
+      win.setBounds(display.bounds)
+      win.setBounds(display.bounds)
+      win.setAlwaysOnTop(true, 'screen-saver')
+      win.setIgnoreMouseEvents(true)
+      win.loadURL(html(percent / 100))
+      return win
+    })
+  }
+
+  private async setHardwareBrightness(value: number): Promise<boolean> {
 
     if (this.platform === 'win32') {
       return await this.setBrightnessWindows(value)
@@ -196,6 +258,7 @@ export class MonitorControlManager {
   }
 
   async getBrightness(): Promise<number> {
+    if (this.currentBrightness < 0) return this.currentBrightness
     if (this.platform === 'win32') {
       return await this.getBrightnessWindows()
     } else if (this.platform === 'linux') {

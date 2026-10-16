@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:" />
+    <title>BlinkBreak Widget</title>
+    <style>
+      :root {
+        --alpha: 0.85;
+        --bg: 24, 24, 30;
+        --accent: #4db8a8;
+        --text: #ececf1;
+        --muted: #8d8d99;
+        --faint: #5f5f6a;
+        --line: rgba(255, 255, 255, 0.07);
+        --hover: rgba(255, 255, 255, 0.05);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+      /* Blur: the wallpaper behind the widget, blurred, under the colour tint */
+      .card { position: relative; isolation: isolate; }
+      #backdrop { position: absolute; z-index: -2; background-size: cover; background-position: center; display: none; pointer-events: none; }
+      body.blur #backdrop { display: block; }
+      /* Tint sits between the wallpaper and the content */
+      #tint { position: absolute; inset: 0; z-index: -1; background: rgba(var(--bg), var(--alpha)); pointer-events: none; }
+      /* Text contrast adapts to the background brightness */
+      body.on-dark { --text: #ffffff; --muted: rgba(255, 255, 255, 0.8); --faint: rgba(255, 255, 255, 0.62); }
+      body.on-dark .card { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+      body.on-light { --text: #111318; --muted: rgba(17, 19, 24, 0.72); --faint: rgba(17, 19, 24, 0.55); --line: rgba(0, 0, 0, 0.1); --hover: rgba(0, 0, 0, 0.06); }
+      body.on-light .pill, body.on-light .count, body.on-light .chip, body.on-light .b-private, body.on-light .b-draft { background: rgba(0, 0, 0, 0.07); }
+      body.on-light .icon-btn:hover { color: #000; }
+      /* Glass effect: frosted, saturated backdrop with a lit edge, top sheen and inner glow */
+      body.blur #backdrop { filter: var(--blur-filter) saturate(180%) brightness(1.08); }
+      body.blur .card {
+        background: none;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 14px;
+        box-shadow:
+          0 12px 40px rgba(0, 0, 0, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.45),
+          inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+          inset 0 0 24px rgba(255, 255, 255, 0.06);
+      }
+      body.blur #tint {
+        background:
+          linear-gradient(160deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%),
+          rgba(var(--bg), var(--alpha));
+      }
+      body.blur .card::after {
+        content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+        background: radial-gradient(120% 60% at 15% 0%, rgba(255, 255, 255, 0.18), transparent 55%);
+      }
+      body.blur header, body.blur nav { border-color: rgba(255, 255, 255, 0.12); }
+      body.blur .repo.open, body.blur .chip, body.blur .pill, body.blur .count { background: rgba(255, 255, 255, 0.1); }
+      body.blur .repo-head:hover, body.blur .item:hover { background: rgba(255, 255, 255, 0.12); }
+      body { font-family: "Segoe UI Variable", "Segoe UI", sans-serif; color: var(--text); user-select: none; padding: 6px; font-size: 12px; }
+      button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+      .card {
+        height: 100%; display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(var(--bg), var(--alpha));
+        background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.08));
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      /* Header */
+      header { padding: 12px 14px 8px; -webkit-app-region: drag; }
+      .top { display: flex; align-items: center; gap: 8px; }
+      .logo { width: 18px; height: 18px; border-radius: 5px; background: var(--accent); display: grid; place-items: center; color: #10201d; font-weight: 800; font-size: 11px; }
+      .title { font-weight: 600; font-size: 13px; flex: 1; }
+      .updated { color: var(--faint); font-size: 10.5px; }
+      .icon-btn { -webkit-app-region: no-drag; width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; color: var(--muted); }
+      .icon-btn:hover { background: var(--hover); color: var(--text); }
+      .spin { animation: spin 0.8s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      .chips { display: flex; gap: 6px; margin-top: 10px; -webkit-app-region: no-drag; overflow-x: auto; }
+      .chip { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: 11px; white-space: nowrap; }
+      .chip.on { background: rgba(77, 184, 168, 0.15); border-color: rgba(77, 184, 168, 0.5); color: var(--accent); }
+
+      /* Tabs */
+      nav { display: flex; padding: 0 10px; border-bottom: 1px solid var(--line); -webkit-app-region: no-drag; }
+      .tab { flex: 1; padding: 8px 0; color: var(--muted); font-size: 11.5px; font-weight: 600; border-bottom: 2px solid transparent; display: flex; justify-content: center; gap: 6px; align-items: center; }
+      .tab.on { color: var(--text); border-color: var(--accent); }
+      .count { padding: 0 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); font-size: 10px; line-height: 16px; }
+      .tab.on .count { background: rgba(77, 184, 168, 0.2); color: var(--accent); }
+      .count.alert { background: rgba(229, 160, 75, 0.2); color: #e5a04b; }
+
+      main { flex: 1; overflow-y: auto; padding: 6px 8px 10px; }
+      main::-webkit-scrollbar { width: 6px; }
+      main::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+
+      .group { color: var(--faint); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 6px 4px; display: flex; justify-content: space-between; }
+      .error { margin: 2px 6px 6px; padding: 6px 8px; border-radius: 8px; background: rgba(229, 160, 75, 0.1); color: #e5a04b; font-size: 11px; }
+      .empty { padding: 36px 16px; text-align: center; color: var(--muted); line-height: 1.6; }
+
+      /* Repo cards */
+      .repo { border-radius: 10px; margin: 2px 0; }
+      .repo.open { background: rgba(255, 255, 255, 0.035); }
+      .repo-head { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 10px; cursor: pointer; }
+      .repo-head:hover { background: var(--hover); }
+      .chev { color: var(--faint); font-size: 9px; width: 10px; transition: transform 0.15s; }
+      .repo.open .chev { transform: rotate(90deg); }
+      .repo-main { flex: 1; min-width: 0; }
+      .repo-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .repo-meta { display: flex; gap: 8px; color: var(--muted); font-size: 10.5px; margin-top: 2px; align-items: center; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 3px; }
+      .pills { display: flex; gap: 4px; }
+      .pill { display: flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+      .pill.hot { background: rgba(77, 184, 168, 0.15); color: var(--accent); }
+      .repo-body { padding: 0 8px 8px 24px; }
+      .section { color: var(--faint); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin: 8px 0 4px; }
+
+      /* Item rows (PRs, issues, commits) */
+      .item { display: flex; gap: 8px; padding: 6px; border-radius: 8px; cursor: pointer; align-items: flex-start; }
+      .item:hover { background: var(--hover); }
+      .avatar { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 9.5px; font-weight: 700; color: #fff; }
+      .item-main { flex: 1; min-width: 0; }
+      .item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .item-sub { color: var(--muted); font-size: 10.5px; margin-top: 1px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      .badge { padding: 0 6px; border-radius: 4px; font-size: 9.5px; font-weight: 700; line-height: 15px; letter-spacing: 0.02em; }
+      .b-new { background: rgba(77, 184, 168, 0.2); color: var(--accent); }
+      .b-draft { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+      .b-ok { background: rgba(80, 200, 120, 0.18); color: #6fd796; }
+      .b-changes { background: rgba(240, 100, 90, 0.18); color: #f08a80; }
+      .b-private { background: rgba(255, 255, 255, 0.06); color: var(--muted); }
+      img.avatar { object-fit: cover; background: rgba(255, 255, 255, 0.1); }
+      .repo-meta { white-space: nowrap; overflow: hidden; }
+      .repo-meta > * { flex-shrink: 0; }
+      .repo-meta .branch-ref { flex-shrink: 1; min-width: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+      .branch-ref { font-family: "Cascadia Code", Consolas, monospace; font-size: 10px; padding: 0 5px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+      .branch-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
+      .branch-chips .chip { font-family: "Cascadia Code", Consolas, monospace; font-size: 10px; padding: 2px 8px; }
+      .chip-more { color: var(--faint); font-size: 10px; align-self: center; }
+      .more { color: var(--accent); font-size: 11px; padding: 4px 6px; display: inline-block; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div id="backdrop"></div>
+      <div id="tint"></div>
+      <header>
+        <div class="top">
+          <div class="logo">G</div>
+          <div class="title">GitHub</div>
+          <span class="updated" id="updated"></span>
+          <button class="icon-btn" id="refresh" title="Refresh">&#x21bb;</button>
+        </div>
+        <div class="chips" id="chips"></div>
+      </header>
+      <nav id="tabs"></nav>
+      <main id="list"></main>
+    </div>
+
+    <script>
+      // All repository data is inserted with textContent, never parsed as HTML.
+      const $ = (id) => document.getElementById(id);
+      const state = { stats: [], account: "all", tab: "repos", open: new Set(), refreshing: false, repoBranches: {} };
+
+      // The branch tracked for this project (set in the app or here), else its default branch
+      function selectedBranch(repo) {
+        const chosen = state.repoBranches[repo.name];
+        return chosen && repo.branches.some((b) => b.name === chosen) ? chosen : repo.defaultBranch;
+      }
+
+      function el(tag, className, text) {
+        const e = document.createElement(tag);
+        if (className) e.className = className;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
+      const open = (url) => window.electronAPI.openWidgetLink(url);
+
+      function ago(iso) {
+        const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+        if (m < 1) return "now";
+        if (m < 60) return m + "m";
+        if (m < 1440) return Math.round(m / 60) + "h";
+        if (m < 43200) return Math.round(m / 1440) + "d";
+        return Math.round(m / 43200) + "mo";
+      }
+      const isNew = (iso) => Date.now() - new Date(iso).getTime() < 86400000;
+
+      // Profile picture (embedded by the main process) or coloured initials
+      function avatar(name, src) {
+        if (src && src.startsWith("data:image/")) {
+          const img = el("img", "avatar");
+          img.src = src;
+          img.alt = name;
+          img.title = name;
+          return img;
+        }
+        let h = 0;
+        for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
+        const a = el("div", "avatar", name.slice(0, 2).toUpperCase());
+        a.style.background = `hsl(${h}, 45%, 42%)`;
+        a.title = name;
+        return a;
+      }
+
+      function badge(text, cls) { return el("span", "badge " + cls, text); }
+
+      function prRow(pr, showRepo) {
+        const row = el("div", "item");
+        row.appendChild(avatar(pr.author, pr.avatar));
+        const main = el("div", "item-main");
+        const title = el("div", "item-title", pr.title);
+        title.title = pr.title;
+        main.appendChild(title);
+        const sub = el("div", "item-sub");
+        sub.appendChild(el("span", "", (showRepo ? pr.repo.split("/")[1] + " " : "") + "#" + pr.number + " · " + pr.author + " · " + ago(pr.createdAt)));
+        if (pr.headRef) sub.appendChild(el("span", "branch-ref", pr.headRef + " → " + pr.baseRef));
+        if (isNew(pr.createdAt)) sub.appendChild(badge("NEW", "b-new"));
+        if (pr.isDraft) sub.appendChild(badge("Draft", "b-draft"));
+        if (pr.review === "APPROVED") sub.appendChild(badge("Approved", "b-ok"));
+        if (pr.review === "CHANGES_REQUESTED") sub.appendChild(badge("Changes", "b-changes"));
+        main.appendChild(sub);
+        row.appendChild(main);
+        row.addEventListener("click", () => open(pr.url));
+        return row;
+      }
+
+      function issueRow(issue) {
+        const row = el("div", "item");
+        row.appendChild(avatar(issue.author, issue.avatar));
+        const main = el("div", "item-main");
+        main.appendChild(el("div", "item-title", issue.title));
+        const sub = el("div", "item-sub");
+        sub.appendChild(el("span", "", "#" + issue.number + " · " + issue.author + " · " + ago(issue.createdAt)));
+        if (isNew(issue.createdAt)) sub.appendChild(badge("NEW", "b-new"));
+        main.appendChild(sub);
+        row.appendChild(main);
+        row.addEventListener("click", () => open(issue.url));
+        return row;
+      }
+
+      function commitRow(c) {
+        const row = el("div", "item");
+        row.appendChild(avatar(c.author, c.avatar));
+        const main = el("div", "item-main");
+        main.appendChild(el("div", "item-title", c.message));
+        const sub = el("div", "item-sub");
+        sub.appendChild(el("span", "", c.author + " · " + ago(c.date)));
+        if (isNew(c.date)) sub.appendChild(badge("NEW", "b-new"));
+        main.appendChild(sub);
+        row.appendChild(main);
+        row.addEventListener("click", () => open(c.url));
+        return row;
+      }
+
+      function repoCard(repo) {
+        const card = el("div", "repo" + (state.open.has(repo.name) ? " open" : ""));
+        const head = el("div", "repo-head");
+        head.appendChild(el("span", "chev", "▶"));
+        const main = el("div", "repo-main");
+        const name = el("div", "repo-name", repo.name.split("/")[1]);
+        name.title = repo.name;
+        main.appendChild(name);
+        const meta = el("div", "repo-meta");
+        if (repo.language) {
+          const lang = el("span");
+          const dot = el("span", "dot");
+          dot.style.background = repo.language.color || "#888";
+          lang.append(dot, repo.language.name);
+          meta.appendChild(lang);
+        }
+        const branch = selectedBranch(repo);
+        if (branch) {
+          const ref = el("span", "branch-ref", branch);
+          ref.title = "Branch: " + branch;
+          meta.appendChild(ref);
+        }
+        meta.appendChild(el("span", "", "★ " + repo.stars));
+        meta.appendChild(el("span", "", "pushed " + ago(repo.pushedAt)));
+        if (repo.isPrivate) meta.appendChild(badge("private", "b-private"));
+        main.appendChild(meta);
+        head.appendChild(main);
+
+        const pills = el("div", "pills");
+        const pr = el("span", "pill" + (repo.openPullRequests ? " hot" : ""), "⇄ " + repo.openPullRequests);
+        pr.title = "Open pull requests";
+        const is = el("span", "pill", "◎ " + repo.openIssues);
+        is.title = "Open issues";
+        pills.append(pr, is);
+        head.appendChild(pills);
+        head.addEventListener("click", () => {
+          state.open.has(repo.name) ? state.open.delete(repo.name) : state.open.add(repo.name);
+          render();
+        });
+        card.appendChild(head);
+
+        if (state.open.has(repo.name)) {
+          const body = el("div", "repo-body");
+
+          // Branch switcher: recently updated branches, choice remembered per repo
+          if (repo.branches.length) {
+            const chips = el("div", "branch-chips");
+            repo.branches.forEach((b) => {
+              const chip = el("button", "chip" + (b.name === branch ? " on" : ""), b.name + (b.name === repo.defaultBranch ? " ·default" : ""));
+              chip.addEventListener("click", (e) => {
+                e.stopPropagation();
+                // Saved as the project's tracked branch; the default branch needs no entry
+                const next = { ...state.repoBranches };
+                if (b.name === repo.defaultBranch) delete next[repo.name];
+                else next[repo.name] = b.name;
+                state.repoBranches = next;
+                render();
+                window.electronAPI.saveWidgetSettings({ repoBranches: next });
+              });
+              chips.appendChild(chip);
+            });
+            if (repo.branchCount > repo.branches.length) chips.appendChild(el("span", "chip-more", "+" + (repo.branchCount - repo.branches.length)));
+            body.appendChild(chips);
+          }
+
+          const commits = (repo.branches.find((b) => b.name === branch) || {}).commits || (repo.lastCommit ? [repo.lastCommit] : []);
+          if (commits.length) {
+            body.appendChild(el("div", "section", "Commits on " + branch));
+            commits.forEach((c) => body.appendChild(commitRow(c)));
+          }
+
+          // Pull requests into or out of the selected branch; all of them if none match
+          const related = repo.pullRequests.filter((p) => p.baseRef === branch || p.headRef === branch);
+          const prs = related.length ? related : repo.pullRequests;
+          if (prs.length) {
+            body.appendChild(el("div", "section", related.length ? "Pull requests · " + branch : "Pull requests"));
+            prs.forEach((p) => body.appendChild(prRow(p, false)));
+          }
+          if (repo.issues.length) {
+            body.appendChild(el("div", "section", "Issues"));
+            repo.issues.forEach((i) => body.appendChild(issueRow(i)));
+          }
+          const link = el("span", "more", "Open on GitHub →");
+          link.addEventListener("click", () => open(repo.url));
+          body.appendChild(link);
+          card.appendChild(body);
+        }
+        return card;
+      }
+
+      function visible() {
+        return state.account === "all" ? state.stats : state.stats.filter((s) => s.accountId === state.account);
+      }
+
+      function renderChips() {
+        const chips = $("chips");
+        chips.replaceChildren();
+        if (state.stats.length < 2) return;
+        const make = (id, label) => {
+          const c = el("button", "chip" + (state.account === id ? " on" : ""), label);
+          c.addEventListener("click", () => { state.account = id; render(); });
+          chips.appendChild(c);
+        };
+        make("all", "All");
+        state.stats.forEach((s) => make(s.accountId, s.label));
+      }
+
+      function renderTabs(accounts) {
+        const prs = accounts.reduce((n, a) => n + a.repos.reduce((m, r) => m + r.openPullRequests, 0), 0);
+        const reviews = accounts.reduce((n, a) => n + a.reviewRequests, 0);
+        const tabs = $("tabs");
+        tabs.replaceChildren();
+        [["repos", "Repos", accounts.reduce((n, a) => n + a.repos.length, 0)], ["prs", "Pull requests", prs], ["reviews", "Reviews", reviews]].forEach(([id, label, count]) => {
+          const t = el("button", "tab" + (state.tab === id ? " on" : ""), label);
+          t.appendChild(el("span", "count" + (id === "reviews" && count ? " alert" : ""), String(count)));
+          t.addEventListener("click", () => { state.tab = id; render(); });
+          tabs.appendChild(t);
+        });
+      }
+
+      function render() {
+        const list = $("list");
+        list.replaceChildren();
+        renderChips();
+        const accounts = visible();
+        renderTabs(accounts);
+
+        if (!state.stats.length) {
+          list.appendChild(el("div", "empty", "Add a GitHub account in BlinkBreak → Plugin → Dynamic Desktop"));
+          return;
+        }
+
+        for (const a of accounts) {
+          const head = el("div", "group");
+          head.appendChild(el("span", "", a.label + " · @" + a.login));
+          list.appendChild(head);
+          if (a.error) list.appendChild(el("div", "error", a.error));
+
+          if (state.tab === "repos") {
+            a.repos.forEach((r) => list.appendChild(repoCard(r)));
+          } else if (state.tab === "prs") {
+            const prs = a.repos.flatMap((r) => r.pullRequests).sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt));
+            if (!prs.length) list.appendChild(el("div", "empty", "No open pull requests"));
+            prs.forEach((p) => list.appendChild(prRow(p, true)));
+          } else {
+            if (!a.reviews.length) list.appendChild(el("div", "empty", "Nothing waiting for your review"));
+            a.reviews.forEach((p) => list.appendChild(prRow(p, true)));
+          }
+        }
+      }
+
+      $("refresh").addEventListener("click", async () => {
+        if (state.refreshing) return;
+        state.refreshing = true;
+        $("refresh").classList.add("spin");
+        try { await window.electronAPI.githubRefresh(); } finally {
+          state.refreshing = false;
+          $("refresh").classList.remove("spin");
+        }
+      });
+
+      window.electronAPI.onWidgetData(({ stats, opacity, color, blur, blurStrength, wallpaper, repoBranches }) => {
+        state.repoBranches = repoBranches || {};
+        const rgb = parseInt((color || "#18181e").slice(1), 16);
+        document.documentElement.style.setProperty("--bg", [(rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255].join(", "));
+        document.documentElement.style.setProperty("--alpha", String(opacity / 100));
+        document.body.classList.toggle("blur", !!(blur && wallpaper));
+        // Perceived brightness of the tint decides light or dark text. A faint tint
+        // over the (usually dark) wallpaper still reads as dark.
+        const lum = (0.299 * ((rgb >> 16) & 255) + 0.587 * ((rgb >> 8) & 255) + 0.114 * (rgb & 255)) / 255;
+        const light = lum > 0.6 && opacity >= 55;
+        document.body.classList.toggle("on-light", light);
+        document.body.classList.toggle("on-dark", !light);        const backdrop = $("backdrop");
+        if (wallpaper && backdrop.dataset.src !== String(wallpaper.length)) {
+          backdrop.style.backgroundImage = "url(" + wallpaper + ")";
+          backdrop.dataset.src = String(wallpaper.length);
+        }
+        document.documentElement.style.setProperty("--blur-filter", "blur(" + (blurStrength || 0) + "px)");
+        state.stats = stats;
+        if (state.account !== "all" && !stats.some((s) => s.accountId === state.account)) state.account = "all";
+        const latest = stats.length ? Math.max(...stats.map((s) => s.updatedAt)) : 0;
+        $("updated").textContent = latest ? new Date(latest).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+        render();
+      });
+
+      // Position the wallpaper so it lines up with the real desktop behind the
+      // card (the card sits 6px inside the window).
+      window.electronAPI.onWidgetGeometry(({ x, y, width, height }) => {
+        const b = $("backdrop").style;
+        b.left = -(x + 6) + "px";
+        b.top = -(y + 6) + "px";
+        b.width = width + "px";
+        b.height = height + "px";
+      });
+
+      // Keep relative times fresh without contacting GitHub
+      setInterval(render, 60000);
+    </script>
+  </body>
+</html>

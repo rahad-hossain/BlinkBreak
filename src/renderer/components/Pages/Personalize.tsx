@@ -109,7 +109,8 @@ export default function Personalize() {
     { name: 'Indoor', brightness: 70, contrast: 75, description: 'Comfortable for indoor use' },
     { name: 'Evening', brightness: 50, contrast: 70, description: 'Reduced for evening' },
     { name: 'Night Mode', brightness: 30, contrast: 65, description: 'Low brightness for night' },
-    { name: 'Dim', brightness: 5, contrast: 50, description: 'Very low for dark environments' }
+    { name: 'Dim', brightness: 5, contrast: 50, description: 'Very low for dark environments' },
+    { name: 'Extra Dim', brightness: -60, contrast: 50, description: 'Below hardware minimum' }
   ]
 
   const applyPreset = async (preset: typeof brightnessPresets[0]) => {
@@ -159,7 +160,7 @@ export default function Personalize() {
         {/* Presets */}
         <div className="mb-6">
           <label className="text-foreground font-medium mb-3 block">Quick Presets</label>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {brightnessPresets.map((preset) => (
               <button
                 key={preset.name}
@@ -182,7 +183,7 @@ export default function Personalize() {
             </div>
             <input
               type="range"
-              min="0"
+              min="-90"
               max="100"
               value={brightness}
               onChange={(e) => {
@@ -193,7 +194,7 @@ export default function Personalize() {
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>Dark</span>
+              <span>Extra dark</span>
               <span>Bright</span>
             </div>
           </div>
@@ -345,64 +346,6 @@ export default function Personalize() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Windows Theme Customization - Coming Soon */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h3 className="text-xl font-semibold text-foreground mb-4">Windows Theme</h3>
-        <div className="p-8 bg-muted/30 rounded-lg border-2 border-dashed border-muted text-center">
-          <div className="text-4xl mb-3">🎨</div>
-          <div className="text-foreground font-medium mb-2">Theme Customization</div>
-          <div className="text-sm text-muted-foreground">
-            Customize Windows taskbar, colors, and appearance
-          </div>
-          <div className="text-xs text-muted-foreground mt-2 opacity-70">Coming Soon</div>
-        </div>
-      </div>
-
-      {/* Dynamic Desktop - Coming Soon */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h3 className="text-xl font-semibold text-foreground mb-4">Dynamic Desktop</h3>
-        <div className="p-8 bg-muted/30 rounded-lg border-2 border-dashed border-muted text-center">
-          <div className="text-4xl mb-3">🖼️</div>
-          <div className="text-foreground font-medium mb-2">Smart Wallpaper System</div>
-          <div className="text-sm text-muted-foreground mb-3">
-            Create dynamic wallpapers with live data integration
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground max-w-md mx-auto">
-            <div className="p-2 bg-background/50 rounded">📧 Email widgets</div>
-            <div className="p-2 bg-background/50 rounded">💻 GitHub stats</div>
-            <div className="p-2 bg-background/50 rounded">🌐 Web data feeds</div>
-            <div className="p-2 bg-background/50 rounded">📊 Custom APIs</div>
-          </div>
-          <div className="text-xs text-muted-foreground mt-3 opacity-70">Coming Soon</div>
-        </div>
-      </div>
-
-      {/* Desktop Widgets - Coming Soon */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h3 className="text-xl font-semibold text-foreground mb-4">Desktop Widgets</h3>
-        <div className="p-8 bg-muted/30 rounded-lg border-2 border-dashed border-muted text-center">
-          <div className="text-4xl mb-3">📱</div>
-          <div className="text-foreground font-medium mb-2">Interactive Desktop Widgets</div>
-          <div className="text-sm text-muted-foreground">
-            Add customizable widgets to your desktop
-          </div>
-          <div className="text-xs text-muted-foreground mt-2 opacity-70">Coming Soon</div>
-        </div>
-      </div>
-
-      {/* Taskbar Customization - Coming Soon */}
-      <div className="bg-card p-6 rounded-lg border border-border">
-        <h3 className="text-xl font-semibold text-foreground mb-4">Taskbar Customization</h3>
-        <div className="p-8 bg-muted/30 rounded-lg border-2 border-dashed border-muted text-center">
-          <div className="text-4xl mb-3">⚙️</div>
-          <div className="text-foreground font-medium mb-2">Custom Taskbar</div>
-          <div className="text-sm text-muted-foreground">
-            Personalize Windows taskbar appearance and behavior
-          </div>
-          <div className="text-xs text-muted-foreground mt-2 opacity-70">Coming Soon</div>
         </div>
       </div>
     </div>
