@@ -1,4 +1,6 @@
-import { Home, Settings, BarChart3, Clock, Palette, Puzzle } from 'lucide-react'
+import { useState } from 'react'
+import { Home, Settings, BarChart3, Clock, Palette, Puzzle, Info } from 'lucide-react'
+import AboutDialog from './AboutDialog'
 
 interface SidebarProps {
   activeTab: string
@@ -6,6 +8,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+  const [showAbout, setShowAbout] = useState(false)
   const menuItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'timer', label: 'Timer', icon: Clock },
@@ -62,10 +65,20 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       </nav>
 
       <div className="p-4 border-t border-border">
-        <p className="text-xs text-muted-foreground text-center">
-          v1.2.0
-        </p>
+        <button
+          onClick={() => setShowAbout(true)}
+          className="group flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-muted"
+          title="About BlinkBreak"
+        >
+          <span className="flex items-center gap-2">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">v{__APP_VERSION__}</span>
+            <span className="text-xs text-muted-foreground group-hover:text-foreground">About</span>
+          </span>
+          <Info size={15} className="text-muted-foreground group-hover:text-primary" />
+        </button>
       </div>
+
+      {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
     </div>
   )
 }
