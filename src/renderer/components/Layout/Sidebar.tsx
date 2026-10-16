@@ -1,4 +1,4 @@
-import { Home, Settings, BarChart3, Clock, Palette } from 'lucide-react'
+import { Home, Settings, BarChart3, Clock, Palette, Puzzle } from 'lucide-react'
 
 interface SidebarProps {
   activeTab: string
@@ -11,6 +11,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     { id: 'timer', label: 'Timer', icon: Clock },
     { id: 'statistics', label: 'Statistics', icon: BarChart3 },
     { id: 'personalize', label: 'Personalize', icon: Palette },
+    { id: 'plugin', label: 'Plugin', icon: Puzzle },
     { id: 'settings', label: 'Settings', icon: Settings }
   ]
 

@@ -9,6 +9,7 @@ import Home from './components/Pages/Home'
 import Timer from './components/Pages/Timer'
 import Statistics from './components/Pages/Statistics'
 import Personalize from './components/Pages/Personalize'
+import Plugin from './components/Pages/Plugin'
 import Settings from './components/Pages/Settings'
 import { BreakMode } from '@shared/types'
 
@@ -94,6 +95,8 @@ function App() {
         return <Statistics />
       case 'personalize':
         return <Personalize />
+      case 'plugin':
+        return <Plugin />
       case 'settings':
         return <Settings />
       default:
