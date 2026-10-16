@@ -61,6 +61,29 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send("update-color-mask", { intensity, red, green, blue }),
 
   // Monitor Controls
+  // Desktop widget
+  getWidgetSettings: () => ipcRenderer.invoke("widget-get-settings"),
+  saveWidgetSettings: (patch) => ipcRenderer.invoke("widget-save-settings", patch),
+  setWidgetEnabled: (enabled) => ipcRenderer.invoke("widget-set-enabled", enabled),
+  githubStartLogin: (label, includePrivate) => ipcRenderer.invoke("github-start-login", label, includePrivate),
+  githubCancelLogin: () => ipcRenderer.send("github-cancel-login"),
+  githubRemoveAccount: (id) => ipcRenderer.invoke("github-remove-account", id),
+  githubRefresh: () => ipcRenderer.invoke("github-refresh"),
+  githubGetStats: () => ipcRenderer.invoke("github-get-stats"),
+  onWidgetSettings: (callback) => {
+    ipcRenderer.on("widget-settings", (_, settings) => callback(settings));
+  },
+  onGithubStats: (callback) => {
+    ipcRenderer.on("github-stats", (_, stats) => callback(stats));
+  },
+  onWidgetData: (callback) => {
+    ipcRenderer.on("widget-data", (_, data) => callback(data));
+  },
+  onWidgetGeometry: (callback) => {
+    ipcRenderer.on("widget-geometry", (_, geo) => callback(geo));
+  },
+  openWidgetLink: (url) => ipcRenderer.send("widget-open-link", url),
+
   // Taskbar
   getTaskbarSettings: () => ipcRenderer.invoke("taskbar-get-settings"),
   setTaskbarStyle: (style) => ipcRenderer.invoke("taskbar-set-style", style),

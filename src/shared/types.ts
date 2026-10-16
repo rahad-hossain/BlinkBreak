@@ -44,15 +44,114 @@ export interface Settings {
   };
   smartModeWhitelist: string[];
   taskbar?: TaskbarSettings;
+  widget?: WidgetSettings;
 }
 
 export type TaskbarMode = "default" | "clear" | "blur" | "acrylic" | "solid";
+
+// Desktop widget (GitHub). Tokens are not part of settings; they are stored
+// encrypted by the main process and never sent to renderers.
+export interface GithubAccount {
+  id: string;
+  label: string;
+  login: string;
+  includePrivate: boolean;
+}
+
+export interface WidgetSettings {
+  enabled: boolean;
+  refreshMinutes: number;
+  repoCount: number;
+  opacity: number; // 0-100
+  color: string; // background colour, "#RRGGBB"
+  blur: boolean; // blurred desktop wallpaper behind the widget
+  blurStrength: number; // 0-40 px
+  repoBranches: Record<string, string>; // repo "owner/name" -> tracked branch; missing = repo default
+  showAvatars: boolean; // contributor profile pictures (fetched by the main process)
+  accounts: GithubAccount[];
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface GithubPullRequest {
+  title: string;
+  number: number;
+  url: string;
+  author: string;
+  createdAt: string;
+  avatar?: string; // data URL
+  baseRef: string;
+  headRef: string;
+  isDraft: boolean;
+  review: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  repo: string;
+}
+
+export interface GithubIssue {
+  title: string;
+  number: number;
+  url: string;
+  author: string;
+  avatar?: string;
+  createdAt: string;
+}
+
+export interface GithubCommit {
+  message: string;
+  author: string;
+  date: string;
+  url: string;
+  avatar?: string;
+}
+
+export interface GithubBranch {
+  name: string;
+  commits: GithubCommit[]; // newest first
+}
+
+export interface GithubRepoStats {
+  name: string;
+  url: string;
+  isPrivate: boolean;
+  pushedAt: string;
+  stars: number;
+  language: { name: string; color: string } | null;
+  openPullRequests: number;
+  openIssues: number;
+  pullRequests: GithubPullRequest[];
+  issues: GithubIssue[];
+  lastCommit: GithubCommit | null;
+  defaultBranch: string;
+  branchCount: number;
+  branches: GithubBranch[]; // most recently updated first
+}
+
+export interface GithubAccountStats {
+  accountId: string;
+  label: string;
+  login: string;
+  reviewRequests: number;
+  reviews: GithubPullRequest[];
+  repos: GithubRepoStats[];
+  updatedAt: number;
+  error?: string;
+}
+
+export interface GithubDeviceCode {
+  userCode: string;
+  verificationUri: string;
+  expiresIn: number;
+}
 
 export interface TaskbarSettings {
   mode: TaskbarMode;
   color: string; // tint or solid colour, "#RRGGBB"
   opacity: number; // tint strength, 0-100
   blur: number; // blur strength for blur and acrylic, 0-60
+  layout: "full" | "adaptive"; // adaptive wraps the icons and the tray, dock style
+  iconScale: number; // centre icon size in percent: 100 normal, 112 medium, 125 large
 }
 
 export interface Statistics {
@@ -168,6 +267,21 @@ export interface ElectronAPI {
     green: number,
     blue: number,
   ) => void;
+
+  // Desktop widget
+  getWidgetSettings: () => Promise<{ settings: WidgetSettings; configured: boolean }>;
+  saveWidgetSettings: (patch: Partial<WidgetSettings>) => Promise<WidgetSettings>;
+  setWidgetEnabled: (enabled: boolean) => Promise<void>;
+  githubStartLogin: (label: string, includePrivate: boolean) => Promise<GithubDeviceCode>;
+  githubCancelLogin: () => void;
+  githubRemoveAccount: (id: string) => Promise<void>;
+  githubRefresh: () => Promise<void>;
+  githubGetStats: () => Promise<GithubAccountStats[]>;
+  onWidgetSettings: (callback: (settings: WidgetSettings) => void) => void;
+  onGithubStats: (callback: (stats: GithubAccountStats[]) => void) => void;
+  onWidgetData: (callback: (data: { stats: GithubAccountStats[]; opacity: number; color: string; blur: boolean; blurStrength: number; wallpaper: string | null; repoBranches: Record<string, string>; showAvatars: boolean }) => void) => void;
+  onWidgetGeometry: (callback: (geo: { x: number; y: number; width: number; height: number }) => void) => void;
+  openWidgetLink: (url: string) => void;
 
   // Taskbar appearance
   getTaskbarSettings: () => Promise<{ settings: TaskbarSettings; available: boolean }>;

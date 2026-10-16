@@ -12,6 +12,8 @@ import { ReminderManager } from "./reminders";
 import { SmartModeManager } from "./smartMode";
 import { WebsiteBlockerManager } from "./websiteBlocker";
 import { TaskbarManager } from "./taskbar";
+import { GithubManager } from "./github";
+import { DesktopWidgetManager } from "./desktopWidget";
 
 let mainWindow: BrowserWindow | null = null;
 let settingsManager: SettingsManager;
@@ -22,6 +24,8 @@ let blueLightFilterManager: BlueLightFilterManager;
 let colorMaskManager: ColorMaskManager;
 let monitorControlManager: MonitorControlManager;
 let taskbarManager: TaskbarManager;
+let githubManager: GithubManager;
+let widgetManager: DesktopWidgetManager;
 let reminderManager: ReminderManager;
 let smartModeManager: SmartModeManager;
 let websiteBlockerManager: WebsiteBlockerManager;
@@ -107,6 +111,18 @@ app.whenReady().then(() => {
   monitorControlManager = new MonitorControlManager();
   taskbarManager = new TaskbarManager(settingsManager);
   taskbarManager.init();
+  githubManager = new GithubManager(settingsManager, (stats) => {
+    widgetManager.push(stats);
+    mainWindow?.webContents.send("github-stats", stats);
+  });
+  widgetManager = new DesktopWidgetManager(githubManager);
+  widgetManager.init();
+  githubManager.schedule();
+  if (githubManager.getSettings().enabled) githubManager.refresh();
+  powerMonitor.on("lock-screen", () => githubManager.setPaused(true));
+  powerMonitor.on("unlock-screen", () => githubManager.setPaused(false));
+  powerMonitor.on("suspend", () => githubManager.setPaused(true));
+  powerMonitor.on("resume", () => githubManager.setPaused(false));
 
   createWindow();
 
@@ -212,6 +228,8 @@ app.on("before-quit", async () => {
   }
   // Clean up blue light filter
   taskbarManager.destroy();
+  githubManager.destroy();
+  widgetManager.destroy();
   await blueLightFilterManager.destroy();
   // Clean up color mask
   await colorMaskManager.destroy();
@@ -418,6 +436,27 @@ ipcMain.on("update-color-mask", async (_, { intensity, red, green, blue }) => {
   settings.colorMask.blue = blue;
   settingsManager.saveSettings(settings);
 });
+
+// IPC Handlers - Desktop widget
+ipcMain.handle("widget-get-settings", () => ({
+  settings: githubManager.getSettings(),
+  configured: githubManager.isConfigured(),
+}));
+ipcMain.handle("widget-save-settings", (_, patch) => {
+  const settings = githubManager.saveSettings(patch);
+  widgetManager.push(githubManager.getStats());
+  mainWindow?.webContents.send("widget-settings", settings);
+  return settings;
+});
+ipcMain.handle("widget-set-enabled", (_, enabled: boolean) => widgetManager.setEnabled(enabled));
+ipcMain.handle("github-start-login", (_, label: string, includePrivate: boolean) =>
+  githubManager.startLogin(label, includePrivate),
+);
+ipcMain.on("github-cancel-login", () => githubManager.cancelLogin());
+ipcMain.handle("github-remove-account", (_, id: string) => githubManager.removeAccount(id));
+ipcMain.handle("github-refresh", () => githubManager.refresh());
+ipcMain.handle("github-get-stats", () => githubManager.getStats());
+ipcMain.on("widget-open-link", (_, url: string) => widgetManager.openLink(url));
 
 // IPC Handlers - Taskbar
 ipcMain.handle("taskbar-get-settings", () => ({
