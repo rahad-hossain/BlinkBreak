@@ -189,7 +189,6 @@
       playSound(decodeURIComponent(soundParam || ""));
 
       // Auto-close after duration
-      const urlParams = new URLSearchParams(window.location.search);
       const duration = parseInt(urlParams.get("duration")) || 20;
 
       setTimeout(() => {

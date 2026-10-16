@@ -132,6 +132,11 @@ export class BreakWindowManager {
         this.softModeWindow = null;
       }
     });
+    // Route window.close() from the page through the same cleanup as closeSoftModeWindow().
+    this.softModeWindow.on("close", (e) => {
+      e.preventDefault();
+      this.closeSoftModeWindow();
+    });
 
     // Load the soft break screen with optional sound
     const htmlPath = path.join(__dirname, "../renderer/softBreak.html");
@@ -149,7 +154,9 @@ export class BreakWindowManager {
   closeAllBreakWindows() {
     this.breakWindows.forEach((window) => {
       if (!window.isDestroyed()) {
-        window.close();
+        window.setIgnoreMouseEvents(true);
+        window.hide();
+        window.destroy();
       }
     });
     this.breakWindows = [];
@@ -164,10 +171,12 @@ export class BreakWindowManager {
 
     try {
       window.removeAllListeners("closed");
-      window.close();
-      if (!window.isDestroyed()) {
-        window.destroy();
-      }
+      // A transparent always-on-top window can leave an invisible layer that
+      // blocks mouse input, so release input and hide it before destroying.
+      window.setIgnoreMouseEvents(true);
+      window.setAlwaysOnTop(false);
+      window.hide();
+      window.destroy();
     } finally {
       this.softModeWindow = null;
     }
