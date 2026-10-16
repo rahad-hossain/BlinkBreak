@@ -19,3 +19,7 @@ out/
 
 # Temporary
 tmp/
+
+# Native build output (rebuild with native\taskbar\build.cmd)
+native/taskbar/build/
+native/bin/

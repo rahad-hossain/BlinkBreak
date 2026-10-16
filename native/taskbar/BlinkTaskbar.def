@@ -1,0 +1,6 @@
+LIBRARY BlinkTaskbar
+EXPORTS
+    DllGetClassObject = BB_DllGetClassObject PRIVATE
+    DllCanUnloadNow = BB_DllCanUnloadNow PRIVATE
+    BB_Inject
+    BB_SetStyle
