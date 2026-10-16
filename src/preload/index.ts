@@ -61,6 +61,10 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send("update-color-mask", { intensity, red, green, blue }),
 
   // Monitor Controls
+  // Taskbar
+  getTaskbarSettings: () => ipcRenderer.invoke("taskbar-get-settings"),
+  setTaskbarStyle: (style) => ipcRenderer.invoke("taskbar-set-style", style),
+
   setMonitorBrightness: (value) =>
     ipcRenderer.invoke("set-monitor-brightness", value),
   setMonitorContrast: (value) =>

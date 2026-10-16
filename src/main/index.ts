@@ -11,6 +11,7 @@ import { MonitorControlManager } from "./monitorControl";
 import { ReminderManager } from "./reminders";
 import { SmartModeManager } from "./smartMode";
 import { WebsiteBlockerManager } from "./websiteBlocker";
+import { TaskbarManager } from "./taskbar";
 
 let mainWindow: BrowserWindow | null = null;
 let settingsManager: SettingsManager;
@@ -20,6 +21,7 @@ let statisticsManager: StatisticsManager;
 let blueLightFilterManager: BlueLightFilterManager;
 let colorMaskManager: ColorMaskManager;
 let monitorControlManager: MonitorControlManager;
+let taskbarManager: TaskbarManager;
 let reminderManager: ReminderManager;
 let smartModeManager: SmartModeManager;
 let websiteBlockerManager: WebsiteBlockerManager;
@@ -103,6 +105,8 @@ app.whenReady().then(() => {
   blueLightFilterManager = new BlueLightFilterManager();
   colorMaskManager = new ColorMaskManager();
   monitorControlManager = new MonitorControlManager();
+  taskbarManager = new TaskbarManager(settingsManager);
+  taskbarManager.init();
 
   createWindow();
 
@@ -207,6 +211,7 @@ app.on("before-quit", async () => {
     clearInterval(screenTimeTracker);
   }
   // Clean up blue light filter
+  taskbarManager.destroy();
   await blueLightFilterManager.destroy();
   // Clean up color mask
   await colorMaskManager.destroy();
@@ -413,6 +418,13 @@ ipcMain.on("update-color-mask", async (_, { intensity, red, green, blue }) => {
   settings.colorMask.blue = blue;
   settingsManager.saveSettings(settings);
 });
+
+// IPC Handlers - Taskbar
+ipcMain.handle("taskbar-get-settings", () => ({
+  settings: taskbarManager.getSettings(),
+  available: taskbarManager.isAvailable(),
+}));
+ipcMain.handle("taskbar-set-style", (_, style) => taskbarManager.apply(style));
 
 // IPC Handlers - Monitor Controls
 ipcMain.handle("set-monitor-brightness", async (_, value: number) => {

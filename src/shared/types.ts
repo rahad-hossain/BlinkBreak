@@ -43,6 +43,16 @@ export interface Settings {
     longBreak: number;
   };
   smartModeWhitelist: string[];
+  taskbar?: TaskbarSettings;
+}
+
+export type TaskbarMode = "default" | "clear" | "blur" | "acrylic" | "solid";
+
+export interface TaskbarSettings {
+  mode: TaskbarMode;
+  color: string; // tint or solid colour, "#RRGGBB"
+  opacity: number; // tint strength, 0-100
+  blur: number; // blur strength for blur and acrylic, 0-60
 }
 
 export interface Statistics {
@@ -158,6 +168,10 @@ export interface ElectronAPI {
     green: number,
     blue: number,
   ) => void;
+
+  // Taskbar appearance
+  getTaskbarSettings: () => Promise<{ settings: TaskbarSettings; available: boolean }>;
+  setTaskbarStyle: (style: TaskbarSettings) => Promise<boolean>;
 
   // Monitor Controls
   setMonitorBrightness: (value: number) => Promise<boolean>;
