@@ -23,17 +23,22 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <algorithm>
+#include <cmath>
+#include <chrono>
 
 // windows.h defines a GetCurrentTime macro that conflicts with a C++/WinRT member.
 #undef GetCurrentTime
 
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.UI.h>
 #include <winrt/Windows.UI.Xaml.h>
 #include <winrt/Windows.UI.Xaml.Media.h>
 #include <winrt/Windows.UI.Xaml.Shapes.h>
+#include <winrt/Windows.UI.Xaml.Controls.h>
 #include <winrt/Windows.UI.Xaml.Hosting.h>
 #include <winrt/Windows.UI.Composition.h>
 #include <winrt/Windows.Graphics.Effects.h>
@@ -75,9 +80,7 @@ static void Log(const wchar_t* fmt, ...)
     CloseHandle(f);
 }
 
-// ---------------------------------------------------------------------------
 // Style settings, stored in the registry so Explorer-side code can read them.
-// ---------------------------------------------------------------------------
 
 enum Mode : DWORD { Default = 0, Clear = 1, Blur = 2, Acrylic = 3, Solid = 4 };
 
@@ -86,6 +89,8 @@ struct Style
     DWORD mode = Default;
     DWORD argb = 0x00000000;
     DWORD blur = 16; // Gaussian blur standard deviation (0-60)
+    DWORD layout = 0; // 0 = full width, 1 = adaptive (backgrounds wrap the icons and the tray)
+    DWORD iconScale = 100; // centre icon size in percent
 };
 
 static Style ReadStyle()
@@ -97,12 +102,14 @@ static Style ReadStyle()
     RegGetValueW(HKEY_CURRENT_USER, REG_KEY, L"Color", RRF_RT_REG_DWORD, nullptr, &s.argb, &size);
     size = sizeof(DWORD);
     RegGetValueW(HKEY_CURRENT_USER, REG_KEY, L"Blur", RRF_RT_REG_DWORD, nullptr, &s.blur, &size);
+    size = sizeof(DWORD);
+    RegGetValueW(HKEY_CURRENT_USER, REG_KEY, L"Layout", RRF_RT_REG_DWORD, nullptr, &s.layout, &size);
+    size = sizeof(DWORD);
+    RegGetValueW(HKEY_CURRENT_USER, REG_KEY, L"IconScale", RRF_RT_REG_DWORD, nullptr, &s.iconScale, &size);
     return s;
 }
 
-// ---------------------------------------------------------------------------
 // Window composition (SetWindowCompositionAttribute, exported by user32.dll)
-// ---------------------------------------------------------------------------
 
 struct ACCENT_POLICY { int AccentState; int AccentFlags; DWORD GradientColor; int AnimationId; };
 struct WINDOWCOMPOSITIONATTRIBDATA { int Attrib; PVOID pvData; SIZE_T cbData; };
@@ -114,20 +121,14 @@ static void ApplyAccent(HWND hwnd, const Style& s)
         GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetWindowCompositionAttribute"));
     if (!swca) return;
 
-    // Settings are stored as ARGB; the accent policy expects ABGR.
-    const DWORD a = (s.argb >> 24) & 0xFF, r = (s.argb >> 16) & 0xFF, g = (s.argb >> 8) & 0xFF, b = s.argb & 0xFF;
-    const DWORD abgr = (a << 24) | (b << 16) | (g << 8) | r;
-
+    // The window itself is always fully transparent while a style or the adaptive
+    // layout is active; all colour and blur is drawn by the XAML backgrounds, which
+    // is what lets the adaptive layout leave the rest of the bar empty.
     ACCENT_POLICY policy{};
-    switch (s.mode)
-    {
-    case Clear:   policy = { 2, 2, 0x00000000, 0 }; break;          // fully transparent window
-    // Blur and Acrylic keep the window transparent; BlurBrush renders the effect.
-    case Blur:    policy = { 2, 2, 0x00000000, 0 }; break;
-    case Acrylic: policy = { 2, 2, 0x00000000, 0 }; break;
-    case Solid:   policy = { 2, 2, abgr, 0 }; break;
-    default:      policy = { 0, 0, 0, 0 }; break;                   // Explorer's default rendering
-    }
+    if (s.mode != Default || s.layout != 0)
+        policy = { 2, 2, 0x00000000, 0 }; // transparent
+    else
+        policy = { 0, 0, 0, 0 };          // Explorer's default rendering
     WINDOWCOMPOSITIONATTRIBDATA data{ 19 /* WCA_ACCENT_POLICY */, &policy, sizeof(policy) };
     const BOOL ok = swca(hwnd, &data);
     if (g_verbose) Log(L"SWCA hwnd=%p state=%d color=0x%08X ok=%d err=%lu", hwnd, policy.AccentState, policy.GradientColor, ok, GetLastError());
@@ -146,11 +147,9 @@ static void ApplyAccentAllTaskbars(const Style& s)
     }, reinterpret_cast<LPARAM>(&s));
 }
 
-// ---------------------------------------------------------------------------
 // Blur brush: backdrop -> Gaussian blur -> colour tint, built with
 // Windows.UI.Composition effects. Used because the system blur and acrylic
 // accent states do not render on the Windows 11 taskbar.
-// ---------------------------------------------------------------------------
 
 namespace wge = winrt::Windows::Graphics::Effects;
 namespace awge = ABI::Windows::Graphics::Effects;
@@ -239,47 +238,265 @@ private:
     winrt::Windows::UI::Color m_tint;
 };
 
-// ---------------------------------------------------------------------------
 // Taskbar background elements and style application
-// ---------------------------------------------------------------------------
 
 struct TrackedRect
 {
     winrt::weak_ref<wux::Shapes::Rectangle> rect;
     wux::Media::Brush original{ nullptr };
     bool stroke = false;
+    winrt::weak_ref<wux::Shapes::Rectangle> trayPill; // adaptive layout: background behind the tray
+    bool hooked = false;                              // size-change handlers attached
 };
 
 static std::mutex g_rectsLock;
 static std::vector<TrackedRect> g_rects;
 static winrt::Windows::System::DispatcherQueue g_xamlQueue{ nullptr };
+static Style g_style; // last applied style, used when the layout changes
+
+static wux::Media::Brush MakeBrush(const Style& s, const wux::UIElement& target, const wux::Media::Brush& original)
+{
+    const winrt::Windows::UI::Color tint{
+        static_cast<uint8_t>(s.argb >> 24), static_cast<uint8_t>(s.argb >> 16),
+        static_cast<uint8_t>(s.argb >> 8), static_cast<uint8_t>(s.argb) };
+
+    switch (s.mode)
+    {
+    case Default: return original;
+    case Solid:   return wux::Media::SolidColorBrush(tint);
+    case Blur:
+    case Acrylic:
+    {
+        auto compositor = wux::Hosting::ElementCompositionPreview::GetElementVisual(target).Compositor();
+        return winrt::make<BlurBrush>(compositor, static_cast<float>(s.blur),
+            s.mode == Blur ? winrt::Windows::UI::Colors::Transparent() : tint);
+    }
+    default:      return wux::Media::SolidColorBrush(winrt::Windows::UI::Colors::Transparent());
+    }
+}
+
+static wux::FrameworkElement FindByName(const wux::DependencyObject& root, std::wstring_view name)
+{
+    const int count = wux::Media::VisualTreeHelper::GetChildrenCount(root);
+    for (int i = 0; i < count; ++i)
+    {
+        const auto child = wux::Media::VisualTreeHelper::GetChild(root, i);
+        if (auto fe = child.try_as<wux::FrameworkElement>(); fe && fe.Name() == name)
+            return fe;
+        if (auto found = FindByName(child, name))
+            return found;
+    }
+    return nullptr;
+}
+
+static wux::DependencyObject TreeRoot(wux::DependencyObject element)
+{
+    while (auto parent = wux::Media::VisualTreeHelper::GetParent(element))
+        element = parent;
+    return element;
+}
+
+// Horizontal extent of an element's visible children, in `relativeTo` coordinates.
+// The icon repeater stretches across the whole bar, so its items are measured instead.
+// Children are measured in the host's own coordinates, then mapped through the
+// host's centre-origin scale; the host centre is the one point the scale keeps fixed.
+static bool ChildrenExtent(const wux::FrameworkElement& host, const wux::UIElement& relativeTo, double scale, double& left, double& right, double& height)
+{
+    double l = 1e9, r = -1e9, h = 0;
+    const int count = wux::Media::VisualTreeHelper::GetChildrenCount(host);
+    for (int i = 0; i < count; ++i)
+    {
+        const auto child = wux::Media::VisualTreeHelper::GetChild(host, i).try_as<wux::FrameworkElement>();
+        if (!child || child.Visibility() != wux::Visibility::Visible || child.ActualWidth() <= 0) continue;
+        const auto at = child.TransformToVisual(host).TransformPoint({ 0, 0 });
+        // Recycled icon containers are parked outside the host; ignore them.
+        if (at.X < 0 || at.X + child.ActualWidth() > host.ActualWidth()) continue;
+        l = (std::min)(l, static_cast<double>(at.X));
+        r = (std::max)(r, at.X + child.ActualWidth());
+        h = (std::max)(h, child.ActualHeight());
+    }
+    if (r <= l) return false;
+    height = h * scale;
+
+    const float mid = static_cast<float>(host.ActualWidth() / 2);
+    const double centre = host.TransformToVisual(relativeTo).TransformPoint({ mid, 0 }).X;
+    left = centre + (l - mid) * scale;
+    right = centre + (r - mid) * scale;
+    return true;
+}
+
+static void RelayoutAll();
+
+// Shrinking waits for the taskbar's icon slide animation (about 300 ms) to finish;
+// layout positions jump to their final values at once, so shrinking immediately
+// would clip the icons that are still moving. Growing is applied immediately.
+static bool g_allowShrink = false;
+static winrt::Windows::System::DispatcherQueueTimer g_shrinkTimer{ nullptr };
+
+static void ScheduleShrink()
+{
+    if (!g_xamlQueue) return;
+    if (!g_shrinkTimer)
+    {
+        g_shrinkTimer = g_xamlQueue.CreateTimer();
+        g_shrinkTimer.Interval(std::chrono::milliseconds(400));
+        g_shrinkTimer.IsRepeating(false);
+        g_shrinkTimer.Tick([](auto&&, auto&&) {
+            g_allowShrink = true;
+            RelayoutAll();
+            g_allowShrink = false;
+        });
+    }
+    g_shrinkTimer.Stop();
+    g_shrinkTimer.Start();
+}
+
+// Adaptive layout: shrink the background to a rounded panel around the centre
+// icons and add a matching panel behind the tray. Full layout restores defaults.
+static void ApplyLayout(TrackedRect& t, const Style& s)
+{
+    constexpr double PAD = 12.0, VPAD = 2.0, RADIUS = 8.0;
+
+    const auto fill = t.rect.get();
+    const auto parent = fill ? wux::Media::VisualTreeHelper::GetParent(fill).try_as<wux::Controls::Panel>() : nullptr;
+    if (!parent) return;
+
+    const auto root = TreeRoot(fill);
+    const auto icons = FindByName(root, L"TaskbarFrameRepeater");
+    const auto tray = FindByName(root, L"SystemTrayFrameGrid");
+    auto pill = t.trayPill.get();
+
+    // Icon size: scale the centre icons around the middle of the bar
+    if (icons)
+    {
+        const double scale = (std::clamp)(s.iconScale, 80ul, 150ul) / 100.0;
+        auto transform = icons.RenderTransform().try_as<wux::Media::ScaleTransform>();
+        if (!transform || std::abs(transform.ScaleX() - scale) > 0.001)
+        {
+            if (!transform)
+            {
+                transform = wux::Media::ScaleTransform();
+                icons.RenderTransformOrigin({ 0.5, 0.5 });
+                icons.RenderTransform(transform);
+            }
+            transform.ScaleX(scale);
+            transform.ScaleY(scale);
+            // A render transform does not trigger a layout pass, so re-measure
+            // once the new scale has been applied.
+            if (g_xamlQueue) g_xamlQueue.TryEnqueue([] { RelayoutAll(); });
+        }
+    }
+
+    if (s.layout == 0 || !icons)
+    {
+        fill.ClearValue(wux::FrameworkElement::WidthProperty());
+        fill.ClearValue(wux::FrameworkElement::MarginProperty());
+        fill.ClearValue(wux::FrameworkElement::HorizontalAlignmentProperty());
+        fill.ClearValue(wux::Shapes::Rectangle::RadiusXProperty());
+        fill.ClearValue(wux::Shapes::Rectangle::RadiusYProperty());
+        if (pill)
+        {
+            uint32_t index;
+            if (parent.Children().IndexOf(pill, index)) parent.Children().RemoveAt(index);
+            t.trayPill = nullptr;
+        }
+        return;
+    }
+
+    if (!t.hooked)
+    {
+        // Re-run the layout whenever icons, the tray or the bar itself change size
+        auto handler = [](auto&&, auto&&) { RelayoutAll(); };
+        icons.SizeChanged(handler);
+        // Icons are added and removed inside a full-width repeater, which does not
+        // resize, so also re-measure after its layout passes.
+        icons.LayoutUpdated([](auto&&, auto&&) { RelayoutAll(); });
+        parent.SizeChanged(handler);
+        if (tray) tray.SizeChanged(handler);
+        t.hooked = true;
+    }
+
+    double left, right, iconHeight;
+    const double scale = (std::clamp)(s.iconScale, 80ul, 150ul) / 100.0;
+    if (!ChildrenExtent(icons, parent, scale, left, right, iconHeight)) return;
+
+    // Panel height follows the (scaled) icons, centred vertically in the bar.
+    const double barHeight = parent.ActualHeight();
+    const double INSET = (std::max)(0.0, (barHeight - (std::min)(barHeight, iconHeight + 2 * VPAD)) / 2); // not laid out yet; SizeChanged retries
+    // Only touch the element when the extent changed; setting it triggers another
+    // layout pass, so unconditional updates would loop.
+    const double width = right - left + 2 * PAD, x = left - PAD;
+    const bool shrinking = !std::isnan(fill.Width()) && width < fill.Width() - 0.5;
+    if (shrinking && !g_allowShrink)
+        ScheduleShrink();
+    else if (std::abs(fill.Width() - width) > 0.5 || std::abs(fill.Margin().Left - x) > 0.5 || std::abs(fill.Margin().Top - INSET) > 0.5)
+    {
+        fill.HorizontalAlignment(wux::HorizontalAlignment::Left);
+        fill.Width(width);
+        fill.Margin({ x, INSET, 0, INSET });
+    }
+    fill.RadiusX(RADIUS);
+    fill.RadiusY(RADIUS);
+
+    if (tray && tray.ActualWidth() > 0)
+    {
+        if (!pill)
+        {
+            pill = wux::Shapes::Rectangle();
+            pill.IsHitTestVisible(false);
+            pill.Fill(MakeBrush(s, fill, t.original));
+            uint32_t index = 0;
+            parent.Children().IndexOf(fill, index);
+            parent.Children().InsertAt(index + 1, pill);
+            wux::Controls::Grid::SetRow(pill, wux::Controls::Grid::GetRow(fill));
+            wux::Controls::Grid::SetRowSpan(pill, wux::Controls::Grid::GetRowSpan(fill));
+            wux::Controls::Grid::SetColumn(pill, wux::Controls::Grid::GetColumn(fill));
+            wux::Controls::Grid::SetColumnSpan(pill, wux::Controls::Grid::GetColumnSpan(fill));
+            t.trayPill = winrt::make_weak(pill);
+        }
+        const auto trayAt = tray.TransformToVisual(parent).TransformPoint({ 0, 0 });
+        const double trayWidth = tray.ActualWidth() + 2 * PAD, trayX = trayAt.X - PAD;
+        if (std::abs(pill.Width() - trayWidth) > 0.5 || std::abs(pill.Margin().Left - trayX) > 0.5 || std::abs(pill.Margin().Top - INSET) > 0.5)
+        {
+            pill.HorizontalAlignment(wux::HorizontalAlignment::Left);
+            pill.Width(trayWidth);
+            pill.Margin({ trayX, INSET, 0, INSET });
+        }
+        pill.RadiusX(RADIUS);
+        pill.RadiusY(RADIUS);
+    }
+}
+
+static void RelayoutAll()
+{
+    std::lock_guard lock(g_rectsLock);
+    for (auto& t : g_rects)
+        if (!t.stroke)
+            try { ApplyLayout(t, g_style); } catch (...) {}
+}
 
 // Must run on the taskbar's XAML thread.
 static void ApplyXaml(const Style& s)
 {
     std::lock_guard lock(g_rectsLock);
+    g_style = s;
     for (auto it = g_rects.begin(); it != g_rects.end();)
     {
         auto rect = it->rect.get();
         if (!rect) { it = g_rects.erase(it); continue; }
 
-        const winrt::Windows::UI::Color tint{
-            static_cast<uint8_t>(s.argb >> 24), static_cast<uint8_t>(s.argb >> 16),
-            static_cast<uint8_t>(s.argb >> 8), static_cast<uint8_t>(s.argb) };
-
-        if (s.mode == Default)
-            rect.Fill(it->original);
-        else if (s.mode == Solid && !it->stroke)
-            rect.Fill(wux::Media::SolidColorBrush(tint));
-        else if ((s.mode == Blur || s.mode == Acrylic) && !it->stroke)
+        if (it->stroke)
         {
-            auto compositor = wux::Hosting::ElementCompositionPreview::GetElementVisual(rect).Compositor();
-            rect.Fill(winrt::make<BlurBrush>(compositor, static_cast<float>(s.blur),
-                s.mode == Blur ? winrt::Windows::UI::Colors::Transparent() : tint));
+            // Top border line: hidden whenever a style is active.
+            if (s.mode == Default && s.layout == 0) rect.Fill(it->original);
+            else rect.Fill(wux::Media::SolidColorBrush(winrt::Windows::UI::Colors::Transparent()));
         }
         else
-            // Clear mode, and the border line in every styled mode.
-            rect.Fill(wux::Media::SolidColorBrush(winrt::Windows::UI::Colors::Transparent()));
+        {
+            rect.Fill(MakeBrush(s, rect, it->original));
+            if (auto pill = it->trayPill.get()) pill.Fill(MakeBrush(s, rect, it->original));
+            try { ApplyLayout(*it, s); } catch (const winrt::hresult_error& e) { Log(L"Layout failed 0x%08X %s", static_cast<unsigned>(e.code()), e.message().c_str()); }
+        }
         ++it;
     }
 }
@@ -343,9 +560,7 @@ private:
     winrt::com_ptr<IXamlDiagnostics> m_diag;
 };
 
-// ---------------------------------------------------------------------------
 // COM object created by XAML Diagnostics inside Explorer
-// ---------------------------------------------------------------------------
 
 static winrt::com_ptr<VisualTreeWatcher> g_watcher;
 
@@ -409,9 +624,7 @@ extern "C" HRESULT STDAPICALLTYPE BB_DllGetClassObject(REFCLSID clsid, REFIID ri
 
 extern "C" HRESULT STDAPICALLTYPE BB_DllCanUnloadNow() { return S_FALSE; }
 
-// ---------------------------------------------------------------------------
 // Explorer side: start-up and refresh loop
-// ---------------------------------------------------------------------------
 
 static void RefreshLoop()
 {
@@ -422,7 +635,7 @@ static void RefreshLoop()
         const Style s = ReadStyle();
 
         // Explorer resets window composition on various events, so re-apply it periodically.
-        if (s.mode != Default || signaled)
+        if (s.mode != Default || s.layout != 0 || signaled)
         {
             g_verbose = signaled;
             ApplyAccentAllTaskbars(s);
@@ -498,9 +711,7 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID)
     return TRUE;
 }
 
-// ---------------------------------------------------------------------------
 // BlinkBreak side: exported API
-// ---------------------------------------------------------------------------
 
 // Runs inside Explorer for each BB_Inject() call. DllMain only runs on first
 // load, so this also restarts a previous attach attempt that failed.
@@ -571,8 +782,9 @@ extern "C" __declspec(dllexport) int BB_Inject()
 
 // Stores a new style and tells the engine to apply it.
 // mode: 0 Default, 1 Clear, 2 Blur, 3 Acrylic, 4 Solid; argb: tint colour;
-// blur: blur strength (0-60).
-extern "C" __declspec(dllexport) int BB_SetStyle(DWORD mode, DWORD argb, DWORD blur)
+// blur: blur strength (0-60); layout: 0 full width, 1 adaptive;
+// iconScale: centre icon size in percent (80-150).
+extern "C" __declspec(dllexport) int BB_SetStyle(DWORD mode, DWORD argb, DWORD blur, DWORD layout, DWORD iconScale)
 {
     HKEY key;
     if (RegCreateKeyExW(HKEY_CURRENT_USER, REG_KEY, 0, nullptr, 0, KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS)
@@ -580,6 +792,8 @@ extern "C" __declspec(dllexport) int BB_SetStyle(DWORD mode, DWORD argb, DWORD b
     RegSetValueExW(key, L"Mode", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&mode), sizeof(mode));
     RegSetValueExW(key, L"Color", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&argb), sizeof(argb));
     RegSetValueExW(key, L"Blur", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&blur), sizeof(blur));
+    RegSetValueExW(key, L"Layout", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&layout), sizeof(layout));
+    RegSetValueExW(key, L"IconScale", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&iconScale), sizeof(iconScale));
     RegCloseKey(key);
 
     if (HANDLE refresh = OpenEventW(EVENT_MODIFY_STATE, FALSE, REFRESH_EVENT))

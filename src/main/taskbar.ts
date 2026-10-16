@@ -19,6 +19,8 @@ export const DEFAULT_TASKBAR: TaskbarSettings = {
   color: "#000000",
   opacity: 25,
   blur: 16,
+  layout: "full",
+  iconScale: 100,
 };
 
 /**
@@ -45,7 +47,7 @@ export class TaskbarManager {
       const lib = koffi.load(dll);
       this.inject = lib.func("int BB_Inject()");
       this.setStyle = lib.func(
-        "int BB_SetStyle(uint32_t mode, uint32_t argb, uint32_t blur)",
+        "int BB_SetStyle(uint32_t mode, uint32_t argb, uint32_t blur, uint32_t layout, uint32_t iconScale)",
       );
     } catch (error: any) {
       console.error("[Taskbar] Failed to load BlinkTaskbar.dll:", error.message);
@@ -73,9 +75,15 @@ export class TaskbarManager {
     if (!this.setStyle) return false;
 
     // Store the style before attaching; the engine reads it as soon as it starts.
-    this.setStyle(MODE_CODE[style.mode], this.toArgb(style), Math.round(style.blur));
+    this.setStyle(
+      MODE_CODE[style.mode],
+      this.toArgb(style),
+      Math.round(style.blur),
+      style.layout === "adaptive" ? 1 : 0,
+      Math.round(style.iconScale),
+    );
 
-    if (style.mode === "default") {
+    if (style.mode === "default" && style.layout === "full" && style.iconScale === 100) {
       this.stopWatchdog();
       return true;
     }
